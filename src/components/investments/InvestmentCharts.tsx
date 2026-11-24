@@ -2,11 +2,11 @@ import { useRef, useState } from 'react'
 import { m, useReducedMotion } from 'framer-motion'
 import { Loader2 } from 'lucide-react'
 import type { InvestmentPortfolio, InvestmentRange } from '../../types'
-import { polylinePoints, seriesBounds, xAt, yAt } from '../../lib/chartSeries'
+import { nearestChartIndex, polylinePoints, seriesBounds, xAt, yAt } from '../../lib/chartSeries'
 import { chartRanges } from '../../lib/investmentChartRanges'
 import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
-import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
+import { ChartPointReadout, ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
 import { panelClass } from '../ui/panelStyles'
 
 export type { AllocationFilter } from '../../lib/investmentHoldingFilter'
@@ -44,9 +44,7 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
   const hasAnyMarketValue = portfolio.chart.some(point => point.totalValue !== undefined)
   const selectNearest = (clientX: number) => {
     if (!svgRef.current || portfolio.chart.length === 0 || masked) return
-    const rect = svgRef.current.getBoundingClientRect()
-    const index = Math.round(((clientX - rect.left) / rect.width) * (portfolio.chart.length - 1))
-    setHoveredIndex(Math.max(0, Math.min(portfolio.chart.length - 1, index)))
+    setHoveredIndex(nearestChartIndex(svgRef.current, clientX, portfolio.chart.length, 0, width))
   }
   const summary = latest
     ? `Latest total portfolio value: ${masked || latest.totalValue === undefined ? 'hidden or incomplete' : money(latest.totalValue, portfolio.appCurrency)}; money put in ${masked || latest.netDeposits === undefined ? 'hidden or incomplete' : money(latest.netDeposits, portfolio.appCurrency)}.`
@@ -117,22 +115,20 @@ export function ValueChart({ portfolio, masked, range, isFetching, onRangeChange
                 </>
               )}
             </svg>
-            {hoveredIndex !== null && portfolio.chart[hoveredIndex] && (
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute z-20 w-36 rounded-control bg-surface-2/70 p-2 text-center shadow-(--app-shadow-overlay) backdrop-blur-md"
-                style={{ left: `clamp(0px, calc(${portfolio.chart.length <= 1 ? 50 : hoveredIndex / (portfolio.chart.length - 1) * 100}% - 72px), calc(100% - 144px))`, top: 4 }}
-              >
-                <b className="block text-caption text-muted-foreground">{portfolio.chart[hoveredIndex].date}</b>
-                <span className="mt-0.5 block text-caption font-semibold text-accent-ink">
+          </ResponsiveChartFrame>
+          <ChartPointReadout>
+            {!masked && !isFetching && hoveredIndex !== null && portfolio.chart[hoveredIndex] && (
+              <>
+                <b>{portfolio.chart[hoveredIndex].date}</b>
+                <span className="font-semibold text-accent-ink">
                   {portfolio.chart[hoveredIndex].totalValue === undefined ? 'Incomplete' : money(portfolio.chart[hoveredIndex].totalValue!, portfolio.appCurrency)}
                 </span>
-                <span className="block text-caption text-muted-foreground">
+                <span>
                   Put in {portfolio.chart[hoveredIndex].netDeposits === undefined ? 'incomplete' : money(portfolio.chart[hoveredIndex].netDeposits!, portfolio.appCurrency)}
                 </span>
-              </div>
+              </>
             )}
-          </ResponsiveChartFrame>
+          </ChartPointReadout>
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-4 text-caption font-medium text-muted-foreground">

@@ -1,12 +1,13 @@
 import { m, useReducedMotion } from 'framer-motion'
 import { useMemo, useRef, useState } from 'react'
 import type { DashboardData, TrendPoint } from '../../types'
-import { cn, formatCurrencyVal, SENSITIVE_AMOUNT_MASK } from '../../lib/utils'
+import { cn, formatCurrencyVal } from '../../lib/utils'
+import { nearestChartIndex } from '../../lib/chartSeries'
 import { useAppPrefs } from '../../contexts/AppContext'
 import { AmountText } from '../ui/AmountText'
 import { SectionHeader } from '../ui/SectionHeader'
 import { ReportSegmented } from '../reports/ReportSegmented'
-import { ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
+import { ChartPointReadout, ResponsiveChartFrame } from '../ui/ResponsiveChartFrame'
 import { panelClass } from '../ui/panelStyles'
 
 type TrendRange = '3month' | '6month' | 'yearly'
@@ -22,7 +23,7 @@ const chartPosition = (points: TrendPoint[], index: number) => {
   const max = Math.max(...points.map(point => point.balance), 1000)
   const x = points.length === 1 ? 250 : 15 + (index / (points.length - 1)) * 470
   const y = 105 - ((points[index].balance - min) / (max - min || 1)) * 90
-  return { x, y, left: (x / 500) * 100, top: (y / 120) * 100 }
+  return { x, y }
 }
 
 const trendLabel = (point: TrendPoint) => {
@@ -87,9 +88,7 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
 
   const selectNearest = (clientX: number) => {
     if (!svgRef.current || points.length === 0) return
-    const rect = svgRef.current.getBoundingClientRect()
-    const index = points.length === 1 ? 0 : Math.round(((clientX - rect.left) / rect.width) * (points.length - 1))
-    setHoveredIndex(Math.max(0, Math.min(points.length - 1, index)))
+    setHoveredIndex(nearestChartIndex(svgRef.current, clientX, points.length, positions[0].x, positions[positions.length - 1].x))
   }
 
   return (
@@ -172,22 +171,6 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
                   )
                 })}
               </svg>
-              {hoveredIndex !== null && points[hoveredIndex] && (() => {
-                const point = points[hoveredIndex]
-                const position = positions[hoveredIndex]
-                return (
-                  <div
-                    aria-hidden="true"
-                    className="absolute z-20 rounded-overlay border border-border/80 bg-card p-2 text-center shadow-(--app-shadow-overlay)"
-                    style={{ left: `clamp(4px, calc(${position.left}% - 55px), calc(100% - 114px))`, top: `clamp(4px, calc(${position.top}% - 50px), calc(100% - 46px))`, width: 110 }}
-                  >
-                    <b className="block text-caption font-medium text-muted-foreground">{trendLabel(point)}</b>
-                    <span className="text-caption font-semibold tabular-nums text-foreground">
-                      {hideSensitive ? SENSITIVE_AMOUNT_MASK : formatCurrencyVal(point.balance, currency)}
-                    </span>
-                  </div>
-                )
-              })()}
               {/* Screen-reader-only data table: the SVG scrubber is pointer-only, so expose the
                   underlying points as a real table for assistive tech and keyboard users. */}
               {!hideSensitive && <div className="sr-only">
@@ -210,6 +193,14 @@ export function TrendLineChart({ dashboardData, growthBalance }: { dashboardData
           ) : <div className="pb-12 text-center text-caption text-muted-foreground">Calculating trend points...</div>}
         </ResponsiveChartFrame>
         <div aria-hidden="true" className="mt-1.5 flex px-[3%]">{points.map((point, index) => <span key={point.cycleKey || `${point.month}-${index}`} className="min-w-0 flex-1 truncate text-center text-caption text-muted-foreground">{axisLabel(point, points.length)}</span>)}</div>
+        <ChartPointReadout>
+          {!hideSensitive && hoveredIndex !== null && points[hoveredIndex] && (
+            <>
+              <b>{trendLabel(points[hoveredIndex])}</b>
+              <span className="font-semibold text-foreground">{formatCurrencyVal(points[hoveredIndex].balance, currency)}</span>
+            </>
+          )}
+        </ChartPointReadout>
         <p className="mt-auto pt-3 text-caption text-muted-foreground">{range === '3month' ? 'Last 3 cycles' : range === '6month' ? 'Last 6 cycles' : `${dashboardData?.setting.selectedYear || new Date().getFullYear()} full year`}</p>
       </div>
     </section>

@@ -1,8 +1,18 @@
-import type { HTMLAttributes } from 'react'
+import type { HTMLAttributes, ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 
 interface ResponsiveChartFrameProps extends HTMLAttributes<HTMLDivElement> {
   density?: 'compact' | 'standard'
+}
+
+/** Reserve space outside the plot so scrubbing never covers a line or moves the chart. */
+export function ChartPointReadout({ children }: { children: ReactNode }) {
+  return (
+    <div aria-hidden="true" data-chart-point-readout
+      className="pointer-events-none flex min-h-10 flex-wrap content-center items-baseline gap-x-3 gap-y-0.5 text-caption tabular-nums text-muted-foreground">
+      {children}
+    </div>
+  )
 }
 
 export function ResponsiveChartFrame({

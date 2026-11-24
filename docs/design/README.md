@@ -162,10 +162,10 @@ Each destination reopens on the section last visited (`navModel.rememberSection`
 
 - **Phones (<640px):** a top bar that is transparent at the top of a page and turns to glass with
   the destination name once scrolled; a floating glass tab bar with the five destinations; a
-  separate round **+** that opens the quick-add sheet.
+  separate round **+** that opens the quick-add sheet. Forecast is a top-bar shortcut while online.
 - **Tablets (640–1023px):** a 72px icon rail.
 - **Desktop (≥1024px):** a 240px sidebar (foldable to the rail, remembered per device) with search
-  (Ctrl/⌘K), **New transaction**, the destinations, Ask AI, bills to review, Settings, the cycle
+  (Ctrl/⌘K), **New transaction**, the destinations, Forecast, Ask AI, bills to review, Settings, the cycle
   card and the account menu. There is no desktop top bar; each page header carries its own title,
   section row and cycle switcher.
 - **Ask AI** is a full-screen sheet on phones and a right-hand drawer from 640px up.

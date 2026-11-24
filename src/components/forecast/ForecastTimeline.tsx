@@ -1,12 +1,13 @@
-import { useState } from 'react'
-import { AlertTriangle, ShieldCheck } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { AlertTriangle, ChevronRight, ShieldCheck, X } from 'lucide-react'
 import type { ForecastCycle, ForecastLine, ForecastSkippedBill } from '../../types'
 import { FORECAST_BUCKETS } from '../../types'
 import { formatForecastDate, formatForecastRange } from '../../lib/forecastScenario'
 import { AmountText } from '../ui/AmountText'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
-import { DetailDisclosure } from '../ui/DetailDisclosure'
+import { BottomSheet } from '../ui/BottomSheet'
+import { IconButton } from '../ui/IconButton'
 import { Panel } from '../ui/Panel'
 
 /** Show split income as one total and keep each scheduled payment or expense visible. */
@@ -31,28 +32,28 @@ function toTimelineLines(lines: readonly ForecastLine[]): ForecastLine[] {
   return result
 }
 
-function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, skippedBills, selectedSkippedBills, onToggleBill }: {
+function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, lines, selectedSkippedBills, onToggleBill }: {
   cycle: ForecastCycle
   currency: string
   masked: boolean
   targetReachedOn: string | null
-  skippedBills: ForecastSkippedBill[]
-  selectedSkippedBills: string[]
+  lines: ForecastLine[]
+  selectedSkippedBills: ReadonlySet<string>
   onToggleBill: (billKey: string) => void
 }) {
   const [open, setOpen] = useState(false)
-  const lines = masked ? [] : [
-    ...toTimelineLines(cycle.lines),
-    ...skippedBills.map(bill => ({ ...bill, kind: 'Bill' as const })),
-  ].sort((left, right) => left.date.localeCompare(right.date))
+  const closeActivity = () => setOpen(false)
+  const skippedCount = lines.filter(line =>
+    line.kind === 'Bill' && line.sourceId !== null && selectedSkippedBills.has(line.sourceId)).length
+  const range = formatForecastRange(cycle.start, cycle.end)
   const isMilestone = targetReachedOn !== null && targetReachedOn >= cycle.start && targetReachedOn <= cycle.end
 
   return (
-    <Panel as="li" className="@container min-w-0 space-y-3 p-3.5 sm:p-4">
+    <Panel as="li" className="@container flex min-w-0 flex-col gap-3 p-3.5 sm:p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-subsection text-foreground">{cycle.label}</h3>
-          <p className="text-caption text-muted-foreground">{formatForecastRange(cycle.start, cycle.end)}</p>
+          <p className="text-caption text-muted-foreground">{range}</p>
         </div>
         {!masked && isMilestone && (
           <Badge tone="success"><ShieldCheck className="size-3" aria-hidden="true" /> Stability target reached</Badge>
@@ -62,29 +63,52 @@ function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, skippedBi
       <dl className="grid grid-cols-2 gap-x-3 gap-y-2 @xl:grid-cols-4">
         {FORECAST_BUCKETS.map(bucket => (
           <div key={bucket} className="min-w-0">
-            <dt className="text-caption text-muted-foreground">{bucket}</dt>
+            <dt className="flex items-center gap-1 text-caption text-muted-foreground">
+              {bucket}
+              {!masked && cycle.shortBuckets.includes(bucket) && (
+                <span className="text-destructive" title="Shortfall">
+                  <AlertTriangle className="size-3" aria-hidden="true" />
+                  <span className="sr-only">Shortfall</span>
+                </span>
+              )}
+            </dt>
             <dd className="text-subsection">
               <AmountText value={cycle.closing[bucket]} currency={currency} isMasked={masked} />
             </dd>
-            {!masked && cycle.shortBuckets.includes(bucket) && (
-              <dd className="flex items-center gap-1 text-caption text-destructive">
-                <AlertTriangle className="size-3 shrink-0" aria-hidden="true" /> Shortfall
-              </dd>
-            )}
           </div>
         ))}
       </dl>
 
-      {!masked && (lines.length === 0
-        ? <p className="text-caption text-muted-foreground">No activity projected.</p>
-        : (
-          <DetailDisclosure label={`Activity · ${lines.length}`} open={open} onOpenChange={setOpen}
-            aside={skippedBills.length > 0 && <Badge>{skippedBills.length} skipped</Badge>}
-            className="border-t border-border [&>summary]:min-h-11 lg:[&>summary]:min-h-9" bodyClassName="pt-0">
+      {!masked && (
+        <div className="mt-auto border-t border-border pt-1">
+          {lines.length === 0 ? (
+            <p className="flex min-h-11 items-center px-2 text-caption text-muted-foreground lg:min-h-9">No activity projected.</p>
+          ) : (
+            <Button variant="tertiary" size="sm" aria-haspopup="dialog" onClick={() => setOpen(true)}
+              className="w-full justify-start rounded-control px-2 text-muted-foreground active:scale-100">
+              <span className="mr-auto">
+                Activity · {lines.length}<span className="sr-only"> for {cycle.label}</span>
+              </span>
+              {skippedCount > 0 && <Badge>{skippedCount} skipped</Badge>}
+              <ChevronRight className="size-4 shrink-0" aria-hidden="true" />
+            </Button>
+          )}
+        </div>
+      )}
+      {!masked && open && (
+        <BottomSheet isOpen title="Cycle activity" description={range} onClose={closeActivity} maxWidthClassName="max-w-xl"
+          headerActions={(
+            <IconButton label="Close cycle activity" onClick={closeActivity}>
+              <X className="size-4" aria-hidden="true" />
+            </IconButton>
+          )}>
+          {lines.length === 0 ? (
+            <p className="text-body text-muted-foreground">No activity projected.</p>
+          ) : (
             <ul className="divide-y divide-border/60">
               {lines.map((line, index) => {
                 const billKey = line.kind === 'Bill' ? line.sourceId : null
-                const skipped = billKey !== null && selectedSkippedBills.includes(billKey)
+                const skipped = billKey !== null && selectedSkippedBills.has(billKey)
                 return (
                   <li key={billKey ?? index} className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 py-1.5">
                     <span className="mr-auto min-w-0 flex-[1_1_7rem]">
@@ -96,7 +120,7 @@ function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, skippedBi
                     <AmountText value={line.amount} currency={currency} signDisplay="always"
                       tone={skipped ? 'muted' : line.amount > 0 ? 'positive' : 'neutral'} className="text-body" />
                     {billKey && (
-                      <Button type="button" variant="tertiary" size="sm" onClick={() => onToggleBill(billKey)}
+                      <Button type="button" variant="tertiary" size="sm" className="min-w-28" onClick={() => onToggleBill(billKey)}
                         aria-label={`${skipped ? 'Include again:' : 'Skip'} ${line.label} on ${line.date} in this forecast`}>
                         {skipped ? 'Include again' : 'Skip'}
                       </Button>
@@ -105,8 +129,9 @@ function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, skippedBi
                 )
               })}
             </ul>
-          </DetailDisclosure>
-        ))}
+          )}
+        </BottomSheet>
+      )}
     </Panel>
   )
 }
@@ -122,13 +147,29 @@ export function ForecastTimeline({
   selectedSkippedBills: string[]
   onToggleBill: (billKey: string) => void
 }) {
+  const linesByCycle = useMemo(() => cycles.map(cycle => {
+    if (masked) return []
+    const lines = toTimelineLines(cycle.lines)
+    for (const bill of skippedBills) {
+      if (bill.date >= cycle.start && bill.date <= cycle.end) lines.push({ ...bill, kind: 'Bill' })
+    }
+    // Included and skipped bills arrive in separate arrays. Order ties by identity so
+    // moving a bill between those arrays preserves its position and keyboard focus.
+    return lines.sort((left, right) =>
+      left.date.localeCompare(right.date) ||
+      right.kind.localeCompare(left.kind) ||
+      left.label.localeCompare(right.label) ||
+      (left.sourceId ?? '').localeCompare(right.sourceId ?? ''))
+  }), [cycles, masked, skippedBills])
+  const skippedKeys = new Set(selectedSkippedBills)
+
   return (
     <div className="@container">
-      <ol aria-label="Forecast by cycle" className="grid items-start gap-3 @min-[48rem]:grid-cols-2">
-        {cycles.map(cycle => (
+      <ol aria-label="Forecast by cycle" className="grid auto-rows-fr gap-3 @min-[48rem]:grid-cols-2">
+        {cycles.map((cycle, index) => (
           <ForecastCycleCard key={cycle.start} cycle={cycle} currency={currency} masked={masked}
-            targetReachedOn={targetReachedOn} selectedSkippedBills={selectedSkippedBills} onToggleBill={onToggleBill}
-            skippedBills={skippedBills.filter(bill => bill.date >= cycle.start && bill.date <= cycle.end)} />
+            targetReachedOn={targetReachedOn} selectedSkippedBills={skippedKeys} onToggleBill={onToggleBill}
+            lines={linesByCycle[index]} />
         ))}
       </ol>
     </div>

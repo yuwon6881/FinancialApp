@@ -23,8 +23,9 @@ const CYCLE_OPTIONS = Array.from({ length: FORECAST_MAX_CYCLES - FORECAST_MIN_CY
   return { value, label: value === 1 ? '1 cycle ahead' : `${value} cycles ahead` }
 })
 
-function ScenarioAmount({ label, value, onChange }: {
+function ScenarioAmount({ label, hint, value, onChange }: {
   label: string
+  hint?: string
   value: number | null
   onChange: (value: number | null) => void
 }) {
@@ -33,7 +34,7 @@ function ScenarioAmount({ label, value, onChange }: {
   const error = text.trim() && parsed === null ? 'Enter an amount from 0 to 100,000,000.' : undefined
 
   return (
-    <FormField label={label} error={error}>
+    <FormField label={label} hint={hint} error={error}>
       <Input inputMode="decimal" value={text} placeholder="Optional"
         onChange={event => {
           const next = event.target.value
@@ -78,11 +79,13 @@ export function ForecastScenarioPanel({
           onChange={value => onCyclesChange(clampCycles(value))} />
       </div>
 
-      <div className="grid grid-cols-2 gap-2.5 sm:gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <ScenarioAmount label="Income per cycle" value={scenario.incomePerCycle} onChange={onIncomeChange} />
-        <ScenarioAmount label="Everyday spending" value={scenario.everydaySpendingPerCycle} onChange={onEverydaySpendingChange} />
+        <ScenarioAmount label="Everyday spending per cycle" value={scenario.everydaySpendingPerCycle}
+          hint="Enter your total Essentials spending for one budgeting cycle, excluding bills and loan instalments."
+          onChange={onEverydaySpendingChange} />
       </div>
-      <p className="text-caption text-muted-foreground">Both start next cycle. Everyday spending is what you spend beyond your bills.</p>
+      <p className="text-caption text-muted-foreground">Both amounts apply once per cycle, starting next cycle.</p>
 
       {scenario.items.length > 0 && (
         <ul aria-label="What-if items" className="divide-y divide-border/60 border-t border-border">

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Bell, Search, Sparkles } from 'lucide-react'
+import { Bell, ChartSpline, Search, Sparkles } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { AppLogo } from '../ui/AppLogo'
@@ -88,7 +88,7 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
       )}
       style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
     >
-      {/* Wraps rather than overflows: at 200% text the five 44px controls no longer fit one row. */}
+      {/* Allow the 44px controls and any sync alerts to wrap on narrow screens. */}
       <div className="flex min-h-14 flex-wrap items-center justify-end gap-1 px-3">
         <Button
           variant="tertiary"
@@ -155,6 +155,14 @@ export const MobileTopBar: React.FC<MobileTopBarProps> = ({
         {onOpenSearch && (
           <IconButton label="Search your records" onClick={onOpenSearch} className="text-muted-foreground">
             <Search className="size-[1.125rem]" />
+          </IconButton>
+        )}
+        {/* The forecast is computed by the server, and the Offline pill needs this slot to keep one row. */}
+        {!syncStatus.offline && (
+          <IconButton label="Forecast" aria-current={activeTab === 'forecast' ? 'page' : undefined}
+            onClick={() => onTabChange('forecast')}
+            className={activeTab === 'forecast' ? 'text-accent-ink' : 'text-muted-foreground'}>
+            <ChartSpline className="size-[1.125rem]" aria-hidden="true" />
           </IconButton>
         )}
         {onAskAI && (

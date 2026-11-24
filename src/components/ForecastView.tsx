@@ -76,7 +76,7 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
 
         <div aria-busy={view.isLoading}>
           {forecast && projection
-            ? <ForecastTimeline cycles={projection.cycles} currency={currency} masked={masked}
+            ? <ForecastTimeline key={masked ? 'hidden' : 'visible'} cycles={projection.cycles} currency={currency} masked={masked}
                 targetReachedOn={projection.stabilityTargetReachedOn}
                 skippedBills={forecast.skippedBills} selectedSkippedBills={scenario.skippedBills} onToggleBill={view.toggleBill} />
             : !view.error && <div role="status" aria-label="Loading forecast"><ForecastCyclesSkeleton /></div>}
@@ -87,7 +87,7 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
             className="border-t border-border [&>summary]:min-h-11 lg:[&>summary]:min-h-9">
             <ul className="list-disc space-y-1.5 pb-2 pl-5 text-body text-muted-foreground">
               <li>Unpaid bills and loan instalments are included. Overdue amounts count today. Paused bills are excluded.</li>
-              <li>Income and everyday spending apply from the next cycle. Income follows your allocation settings and everyday spending comes out of Essentials.</li>
+              <li>Starting next cycle, income follows your allocation settings and everyday spending comes out of Essentials once per cycle.</li>
               <li>Stability repayment instalments are excluded.</li>
               {forecast.stabilityTarget > 0 && !masked && (
                 <li>

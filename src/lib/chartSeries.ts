@@ -52,3 +52,12 @@ export function polylinePoints(values: Array<number | undefined>, geometry: Seri
     .filter(Boolean)
     .join(' ')
 }
+
+/** SVG view boxes can be letterboxed inside the responsive frame. Use plot coordinates. */
+export function nearestChartIndex(svg: SVGSVGElement, clientX: number, count: number, startX: number, endX: number) {
+  if (count <= 1) return 0
+  const transform = svg.getScreenCTM()
+  if (!transform || transform.a === 0 || startX === endX) return 0
+  const plotX = (clientX - transform.e) / transform.a
+  return Math.max(0, Math.min(count - 1, Math.round((plotX - startX) / (endX - startX) * (count - 1))))
+}

@@ -1,6 +1,6 @@
 import React from 'react'
 import { m } from 'framer-motion'
-import { Bell, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Sparkles } from 'lucide-react'
+import { Bell, ChartSpline, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings, Sparkles } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { AppLogo } from '../ui/AppLogo'
 import { SPRING } from '../../lib/animations'
@@ -250,6 +250,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className={label}>{failedOpsCount} failed to sync</span>
           </Button>
         )}
+        {navItem('forecast', 'Forecast', <ChartSpline className="size-[1.125rem]" strokeWidth={1.9} />, () => onTabChange('forecast'), { active: activeTab === 'forecast' })}
         {navItem('ai', 'Ask AI', <Sparkles className="size-[1.125rem] text-accent-ink" strokeWidth={1.9} />, onAskAI)}
         {navItem(
           'notifications',

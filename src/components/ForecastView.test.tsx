@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { CashFlowForecast, ForecastCycle, ForecastScenario } from '../types'
 
@@ -57,6 +57,9 @@ describe('ForecastView', () => {
 
     expect(screen.getByRole('note').textContent).toContain('without changing your records')
     expect(screen.getByLabelText('Income per cycle').getAttribute('placeholder')).toBe('Optional')
+    const spending = screen.getByLabelText('Everyday spending per cycle')
+    expect(document.getElementById(spending.getAttribute('aria-describedby')!)?.textContent)
+      .toContain('total Essentials spending for one budgeting cycle, excluding bills and loan instalments')
     expect(await screen.findByText('What’s included')).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Dec 2026' })).toBeTruthy()
     expect(screen.getByText('No bucket runs short in this forecast.')).toBeTruthy()
@@ -76,20 +79,30 @@ describe('ForecastView', () => {
     expect(screen.getByRole('button', { name: /Reset what-ifs/ })).toHaveProperty('disabled', false)
   })
 
-  it('skips a bill from the cycle card and offers to include it again', async () => {
-    renderView()
-    fireEvent.click(await screen.findByText('Activity · 1'))
-    fetchCashFlowForecast.mockResolvedValue(response({
-      skippedBills: [{ date: '2026-12-05', amount: -170, bucket: 'Essentials', label: 'Gym', sourceId: 'gym:2026-12-05' }],
-      forecast: { ...response().forecast, cycles: [cycle({ lines: [] })] },
-    }))
+  it('updates a bill toggle in the activity dialog while the server response is pending', async () => {
+    vi.useFakeTimers()
+    try {
+      renderView()
+      await act(() => vi.advanceTimersByTimeAsync(0))
+      fireEvent.click(screen.getByRole('button', { name: /Activity · 1/ }))
+      expect(screen.getByRole('dialog', { name: 'Cycle activity' })).toBeTruthy()
+      fetchCashFlowForecast.mockImplementationOnce(() => new Promise(() => {}))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Skip Gym on 2026-12-05 in this forecast' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Skip Gym on 2026-12-05 in this forecast' }))
+      expect(screen.getByText('1 skipped')).toBeTruthy()
+      const include = screen.getByRole('button', { name: /Include again: Gym/ })
+      await act(() => vi.advanceTimersByTimeAsync(0))
+      expect(lastScenario().skippedBills).toEqual(['gym:2026-12-05'])
+      const pendingSignal = fetchCashFlowForecast.mock.calls.at(-1)![1]
 
-    await waitFor(() => expect(lastScenario().skippedBills).toEqual(['gym:2026-12-05']))
-    expect(await screen.findByText('1 skipped')).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: /Include again: Gym/ }))
-    await waitFor(() => expect(lastScenario().skippedBills).toEqual([]))
+      fireEvent.click(include)
+      expect(screen.queryByText('1 skipped')).toBeNull()
+      await act(() => vi.advanceTimersByTimeAsync(0))
+      expect(lastScenario().skippedBills).toEqual([])
+      expect(pendingSignal?.aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('flags a bucket that runs short', async () => {
@@ -106,10 +119,11 @@ describe('ForecastView', () => {
     renderView(true)
     await screen.findByRole('heading', { name: 'Dec 2026' })
 
-    expect(screen.queryByLabelText('Income')).toBeNull()
+    expect(screen.queryByLabelText('Income per cycle')).toBeNull()
     expect(screen.getByText(/Amounts are hidden/)).toBeTruthy()
     expect(screen.queryByText(/830/)).toBeNull()
     expect(screen.queryByText('Gym')).toBeNull()
+    expect(screen.queryByRole('button', { name: /Activity ·/ })).toBeNull()
     expect(screen.queryByText(/runs short/)).toBeNull()
   })
 

@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react'
 import type { ForecastPoint } from '../../../lib/investmentForecast'
-import { bandPolygon, seriesBounds, xAt, yAt } from '../../../lib/chartSeries'
+import { bandPolygon, nearestChartIndex, seriesBounds, xAt, yAt } from '../../../lib/chartSeries'
 import { formatCurrencyVal } from '../../../lib/utils'
-import { ResponsiveChartFrame } from '../../ui/ResponsiveChartFrame'
+import { ChartPointReadout, ResponsiveChartFrame } from '../../ui/ResponsiveChartFrame'
 
 export function InvestmentForecastChart({
   points,
@@ -38,9 +38,7 @@ export function InvestmentForecastChart({
     : 'Forecast data is not available.'
   const selectNearest = (clientX: number) => {
     if (!svgRef.current || points.length === 0 || masked) return
-    const rect = svgRef.current.getBoundingClientRect()
-    const index = Math.round(((clientX - rect.left) / rect.width) * (points.length - 1))
-    setHoveredIndex(Math.max(0, Math.min(points.length - 1, index)))
+    setHoveredIndex(nearestChartIndex(svgRef.current, clientX, points.length, 0, width))
   }
   const hovered = hoveredIndex === null ? null : points[hoveredIndex] ?? null
   const hoveredX = hoveredIndex ?? 0
@@ -81,23 +79,21 @@ export function InvestmentForecastChart({
           )}
         </svg>
         <span className="pointer-events-none absolute left-0 top-0 rounded bg-card/70 px-1 text-caption font-semibold text-muted-foreground">{masked ? '••••' : money(bounds.max)}</span>
-        {hovered && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute z-20 w-40 rounded-control bg-surface-2/70 p-2 text-center shadow-(--app-shadow-overlay) backdrop-blur-md"
-            style={{ left: `clamp(0px, calc(${points.length <= 1 ? 50 : hoveredX / (points.length - 1) * 100}% - 80px), calc(100% - 160px))`, top: 4 }}
-          >
-            <b className="block text-caption text-muted-foreground">{hovered.year === 0 ? 'Today' : `In ${hovered.year} years`}</b>
-            <span className="mt-0.5 block text-caption font-semibold text-accent-ink">{money(hovered.median)}</span>
-            <span className="block text-caption text-muted-foreground">Could be {money(hovered.lower)} to {money(hovered.upper)}</span>
-          </div>
-        )}
       </ResponsiveChartFrame>
       <div className="mt-1 flex justify-between text-caption font-semibold text-muted-foreground">
         <span>Today</span>
         <span>{Math.round((ending?.year ?? 0) / 2)} years</span>
         <span>In {ending?.year ?? 0} years</span>
       </div>
+      <ChartPointReadout>
+        {!masked && hovered && (
+          <>
+            <b>{hovered.year === 0 ? 'Today' : `In ${hovered.year} years`}</b>
+            <span className="font-semibold text-accent-ink">{money(hovered.median)}</span>
+            <span>Could be {money(hovered.lower)} to {money(hovered.upper)}</span>
+          </>
+        )}
+      </ChartPointReadout>
       {/* Swatches carry the same tokens as the marks above: a legend in a different
           hue from its own line is worse than no legend at all. */}
       <div className="mt-3 flex flex-wrap gap-4 text-caption font-semibold text-muted-foreground">

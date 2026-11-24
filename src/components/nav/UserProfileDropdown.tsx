@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import {
   ChevronsUpDown,
-  ChartSpline,
   Settings,
   Eye,
   EyeOff,
@@ -108,11 +107,6 @@ export const UserProfileDropdown: React.FC<UserProfileDropdownProps> = ({
           <DropdownMenuItem onSelect={() => onTabChange('settings')} className={ITEM}>
             <Settings className="size-4 text-muted-foreground" />
             <span>Settings</span>
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onSelect={() => onTabChange('forecast')} className={ITEM}>
-            <ChartSpline className="size-4 text-muted-foreground" />
-            <span>Forecast</span>
           </DropdownMenuItem>
 
           <DropdownMenuItem
