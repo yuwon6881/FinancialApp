@@ -66,18 +66,64 @@ export function changeGroupTarget(
   return groups.map(group => group.key === key ? { ...group, targetPercentage: units / scale } : updated.get(group.key) ?? group)
 }
 
-export function removeInvestmentGroup(groups: readonly InvestmentGroup[], key: string): InvestmentGroup[] {
-  const remaining = groups.filter(group => group.key !== key)
-  const scale = 1 / groupTargetStep(groups)
-  return remaining.length ? splitTargets(remaining, 100 * scale, scale) : []
+/** A usable target mix: every group above zero and the whole plan at exactly 100%. */
+export function hasCompleteTargets(groups: readonly InvestmentGroup[]) {
+  return groups.length > 0 && groups.every(group => group.targetPercentage > 0)
+    && groups.reduce((sum, group) => sum + Math.round(group.targetPercentage * 100), 0) === 10000
 }
 
-/** Restore the saved mix for the groups still present, then normalize after membership edits. */
-export function resetGroupTargets(groups: readonly InvestmentGroup[], saved: readonly InvestmentGroup[]) {
-  const weights = new Map(saved.map(group => [group.key, group.targetPercentage]))
-  const restored = groups.map(group => ({ ...group, targetPercentage: weights.get(group.key) ?? group.targetPercentage }))
-  const scale = 1 / groupTargetStep(restored)
-  return restored.length ? splitTargets(restored, 100 * scale, scale) : []
+/**
+ * Removes a group. A complete mix is spread back over the groups that remain; while targets are
+ * off the shares carry no meaning, so they are left untouched rather than invented.
+ */
+export function removeInvestmentGroup(groups: readonly InvestmentGroup[], key: string): InvestmentGroup[] {
+  const remaining = groups.filter(group => group.key !== key)
+  if (!hasCompleteTargets(groups) || remaining.length === 0) return remaining
+  const scale = 1 / groupTargetStep(groups)
+  return splitTargets(remaining, 100 * scale, scale)
+}
+
+/** Adds a group, taking a small share from the others only while the mix is in use. */
+export function addInvestmentGroup(groups: readonly InvestmentGroup[], label: string, targetsActive: boolean): InvestmentGroup[] {
+  const added: InvestmentGroup = { key: crypto.randomUUID().replaceAll('-', ''), label, targetPercentage: 0, forecastClass: null }
+  if (!targetsActive || !hasCompleteTargets(groups)) return [...groups, added]
+  return changeGroupTarget([...groups, added], added.key, 5)
+}
+
+/**
+ * Whole-percent targets weighted by `weights` (missing or zero weights still get 1%), or an even
+ * split when no weight is known. Used for "Split evenly", "Match current mix" and the first mix a
+ * person gets when they turn targets on.
+ */
+export function weightedGroupTargets(groups: readonly InvestmentGroup[], weights?: ReadonlyMap<string, number>) {
+  if (groups.length === 0) return []
+  const known = weights && [...groups].reduce((sum, group) => sum + Math.max(0, weights.get(group.key) ?? 0), 0) > 0
+  const weighted = groups.map(group => ({ ...group, targetPercentage: known ? Math.max(0, weights.get(group.key) ?? 0) : 1 }))
+  return splitTargets(weighted, 100, 1)
+}
+
+/**
+ * Each group's share of the money already sorted into groups, by key — or undefined when any
+ * draft group's value is unknown. A group that is not saved yet holds nothing, so it counts as 0.
+ */
+export function currentGroupMix(
+  groups: readonly InvestmentGroup[],
+  sleeves: ReadonlyArray<{ sleeve: string; value?: number | null }>,
+): Map<string, number> | undefined {
+  const values = new Map(sleeves.map(sleeve => [sleeve.sleeve, sleeve.value]))
+  const mix = new Map<string, number>()
+  for (const group of groups) {
+    const value = values.has(group.key) ? values.get(group.key) : 0
+    if (value == null || !Number.isFinite(value)) return undefined
+    mix.set(group.key, Math.max(0, value))
+  }
+  return [...mix.values()].some(value => value > 0) ? mix : undefined
+}
+
+/** Names the investments a save would move to "Not sorted", so removing a group is never a surprise. */
+export function releasedByRemoval<T extends { sleeve?: string | null }>(groups: readonly InvestmentGroup[], assignments: readonly T[]): T[] {
+  const kept = new Set(groups.map(group => group.key))
+  return assignments.filter(assignment => assignment.sleeve && !kept.has(assignment.sleeve))
 }
 
 export const investmentGroupColor = (index: number) => [

@@ -1,18 +1,22 @@
 import { useState, type CSSProperties } from 'react'
 import { Lock, Unlock } from 'lucide-react'
 import type { InvestmentGroup } from '../../types'
-import { changeGroupTarget, groupTargetLimit, groupTargetStep, investmentGroupColor } from '../../lib/investmentGroups'
+import { changeGroupTarget, groupTargetLimit, groupTargetStep, investmentGroupColor, weightedGroupTargets } from '../../lib/investmentGroups'
 import { Button } from '../ui/Button'
 import { IconButton } from '../ui/IconButton'
 import { RangeInput } from '../ui/RangeInput'
 import { SegmentedMeter } from '../ui/SegmentedMeter'
 
-export function InvestmentGroupTargets({ groups, disabled, onChange }: {
+export function InvestmentGroupTargets({ groups, disabled, initiallyLocked, currentMix, onChange }: {
   groups: InvestmentGroup[]
   disabled: boolean
+  /** Saved mixes open locked against accidental drags; a mix just switched on opens ready to edit. */
+  initiallyLocked: boolean
+  /** Today's share of each group, when every value is known. */
+  currentMix?: ReadonlyMap<string, number>
   onChange: (groups: InvestmentGroup[]) => void
 }) {
-  const [locked, setLocked] = useState(true)
+  const [locked, setLocked] = useState(initiallyLocked)
   const [lockedKey, setLockedKey] = useState<string | null>(null)
   const currentLock = groups.length >= 3 && groups.some(group => group.key === lockedKey) ? lockedKey : null
   const editable = !disabled && !locked
@@ -20,7 +24,7 @@ export function InvestmentGroupTargets({ groups, disabled, onChange }: {
   const total = Math.round(groups.reduce((sum, group) => sum + group.targetPercentage, 0) * 100) / 100
 
   return (
-    <div className="mt-4 border-t border-border pt-3">
+    <div className="mt-4">
       <div className="flex min-w-0 items-center justify-between gap-3">
         <p className="text-caption text-muted-foreground">The share of your Growth investments each group should hold.</p>
         <Button variant="secondary" size="sm" onClick={() => setLocked(!locked)}
@@ -34,7 +38,16 @@ export function InvestmentGroupTargets({ groups, disabled, onChange }: {
           label={`Target mix: ${groups.map(group => `${group.label} ${group.targetPercentage}%`).join(', ')}`}
           segments={groups.map((group, index) => ({ label: group.label, value: group.targetPercentage, color: investmentGroupColor(index) }))}
         />
-        <p className="text-right text-caption tabular-nums text-muted-foreground">Total: {total}%</p>
+        <div className="flex flex-wrap items-center justify-end gap-x-1 gap-y-1">
+          <Button variant="tertiary" size="sm" disabled={!editable} onClick={() => { setLockedKey(null); onChange(weightedGroupTargets(groups)) }}>
+            Split evenly
+          </Button>
+          <Button variant="tertiary" size="sm" disabled={!editable || !currentMix}
+            onClick={() => { setLockedKey(null); onChange(weightedGroupTargets(groups, currentMix)) }}>
+            Match current mix
+          </Button>
+          <p className="ml-2 text-caption tabular-nums text-muted-foreground">Total: {total}%</p>
+        </div>
       </div>
       <div className="mt-2 divide-y divide-border/60">
         {groups.map((group, index) => {

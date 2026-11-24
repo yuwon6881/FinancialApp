@@ -124,29 +124,73 @@ describe('InvestmentPlanSection sliders', () => {
 
     expect(screen.queryByRole('button', { name: 'Add group' })).toBeNull()
     expect(screen.queryByRole('slider')).toBeNull()
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable investment grouping' }))
+    // Targets wait for a group to divide money between.
+    expect(screen.getByRole<HTMLButtonElement>('switch', { name: 'Use portfolio targets' }).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('switch', { name: 'Group investments' }))
     fireEvent.click(screen.getByRole('button', { name: 'Add group' }))
     fireEvent.change(screen.getByRole('textbox', { name: 'Group name' }), { target: { value: 'Property' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add group' }))
     expect(screen.queryByRole('slider')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Save investment plan' }))
     expect(queueMutation).toHaveBeenCalledWith('investmentPlan', 'update', 'three-fund', expect.objectContaining({
-      groups: [expect.objectContaining({ label: 'Property', targetPercentage: 100 })],
+      groups: [expect.objectContaining({ label: 'Property', targetPercentage: 0 })],
       groupingEnabled: true,
       targetsEnabled: false,
     }))
     fireEvent.click(screen.getByRole('button', { name: 'Remove Property group' }))
-    expect(screen.getByText(/leave this list empty/)).toBeTruthy()
+    expect(screen.getByText(/No groups yet/)).toBeTruthy()
   })
 
-  it('resets target edits back to the saved mix', () => {
-    render(<AppProvider value={context}><InvestmentPlanSection initialOverview={allocation} /></AppProvider>)
+  it('seeds an even mix when targets are turned on and starts it ready to edit', () => {
+    const grouped = { ...allocation, plan: {
+      groupingEnabled: true, targetsEnabled: false, watchDrift: 3, alertDrift: 5,
+      groups: [
+        { key: 'a1111111111111111111111111111111', label: 'Shares', targetPercentage: 0, forecastClass: null },
+        { key: 'b2222222222222222222222222222222', label: 'Bonds', targetPercentage: 0, forecastClass: null },
+        { key: 'c3333333333333333333333333333333', label: 'Cash', targetPercentage: 0, forecastClass: null },
+      ],
+    } }
+    render(<AppProvider value={context}><InvestmentPlanSection initialOverview={grouped} /></AppProvider>)
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Use portfolio targets' }))
+    const sliders = screen.getAllByRole<HTMLInputElement>('slider').slice(0, 3)
+    expect(sliders.map(slider => Number(slider.value))).toEqual([34, 33, 33])
+    expect(sliders[0].disabled).toBe(false)
+  })
+
+  it('matches the current mix and discards every unsaved change at once', () => {
+    const held = { ...allocation, sleeves: [
+      { sleeve: 'USEquity', label: 'US Equity', targetPercentage: 66, value: 700, status: 'OnTrack' as const },
+      { sleeve: 'InternationalExUS', label: 'International ex-US', targetPercentage: 10, value: 100, status: 'OnTrack' as const },
+      { sleeve: 'Bonds', label: 'Bonds', targetPercentage: 24, value: 200, status: 'OnTrack' as const },
+    ] }
+    render(<AppProvider value={context}><InvestmentPlanSection initialOverview={held} /></AppProvider>)
     fireEvent.click(screen.getByRole('button', { name: 'Locked' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Match current mix' }))
     const us = screen.getByRole<HTMLInputElement>('slider', { name: 'US Equity target' })
-    fireEvent.change(us, { target: { value: '75' } })
-    expect(us.value).toBe('75')
-    fireEvent.click(screen.getByRole('button', { name: 'Reset targets' }))
-    expect(us.value).toBe('66')
+    expect(us.value).toBe('70')
+    fireEvent.click(screen.getByRole('switch', { name: 'Group investments' }))
+    expect(screen.queryByRole('slider', { name: 'US Equity target' })).toBeNull()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Discard changes' }))
+    expect(screen.getByRole('switch', { name: 'Group investments' }).getAttribute('aria-checked')).toBe('true')
+    expect(screen.getByRole<HTMLInputElement>('slider', { name: 'US Equity target' }).value).toBe('66')
+  })
+
+  it('lets an assigned group be removed and undo puts its investments back', () => {
+    const queueMutation = vi.fn(() => true)
+    const assigned = { ...allocation, assignments: [
+      { instrumentId: 'bnd', symbol: 'BND', name: 'Bonds fund', sleeve: 'Bonds', order: 0 },
+    ] }
+    render(<AppProvider value={{ ...context, queueMutation }}><InvestmentPlanSection initialOverview={assigned} /></AppProvider>)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Bonds group' }))
+    expect(screen.getByText(/Saving moves BND to Not sorted/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Save investment plan' }))
+    expect(queueMutation).toHaveBeenCalledWith('investmentPlan', 'update', 'three-fund', expect.objectContaining({
+      groups: [expect.objectContaining({ key: 'USEquity' }), expect.objectContaining({ key: 'InternationalExUS' })],
+      undoSnapshot: expect.objectContaining({ restoreAssignments: [{ instrumentId: 'bnd', sleeve: 'Bonds' }] }),
+    }))
   })
 
   it('locks both drift sliders by default and unlocks individually', async () => {

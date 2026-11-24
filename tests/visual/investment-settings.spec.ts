@@ -26,7 +26,7 @@ test('portfolio groups can be added, assigned, and removed from Settings', async
   await expect(page.getByText(/50% and the group holds 55%/)).toBeVisible()
   await expect(page.getByRole('slider', { name: /Off-target alert/ })).toHaveAttribute('aria-valuetext', '10 percentage points')
   await page.getByRole('button', { name: 'Locked', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Remove Bonds group' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Remove Bonds group' })).toBeEnabled()
   await page.getByRole('button', { name: 'Add group' }).click()
   await page.getByRole('textbox', { name: 'Group name' }).fill('Real estate')
   await page.getByRole('button', { name: 'Add group' }).click()
@@ -39,20 +39,60 @@ test('portfolio groups can be added, assigned, and removed from Settings', async
   await page.getByRole('combobox', { name: 'Classify VNQ' }).click()
   await page.getByRole('option', { name: 'Real estate', exact: true }).click()
   await expect.poll(() => instrument.sleeve).toBe(overview.plan.groups!.find(group => group.label === 'Real estate')!.key)
-  await expect(page.getByRole('button', { name: 'Remove Real estate group' })).toBeDisabled()
+  // Removing a group that still holds an investment says what the save will do, then allows it.
+  await page.getByRole('button', { name: 'Remove Real estate group' }).click()
+  await expect(page.getByText(/Saving moves VNQ to Not sorted/)).toBeVisible()
+  await page.getByRole('button', { name: 'Discard changes' }).click()
+  await expect(page.getByRole('button', { name: 'Remove Real estate group' })).toBeVisible()
   await page.getByRole('button', { name: 'Remove Bonds group' }).click()
   await expect(page.getByRole('slider', { name: 'Bonds target' })).toHaveCount(0)
   await expect(page.getByText('Total: 100%')).toBeVisible()
   await save.click()
   await expect.poll(() => overview.plan.groups?.some(group => group.key === 'Bonds')).toBe(false)
-  await page.getByRole('checkbox', { name: 'Enable portfolio targets' }).uncheck()
+  await page.getByRole('switch', { name: 'Use portfolio targets' }).click()
   await expect(page.getByRole('slider', { name: 'Real estate target' })).toHaveCount(0)
   await expect(page.getByRole('combobox', { name: 'Classify VNQ' })).toBeVisible()
-  await page.getByRole('checkbox', { name: 'Enable investment grouping' }).uncheck()
+  await page.getByRole('switch', { name: 'Group investments' }).click()
+  await expect(page.getByRole('switch', { name: 'Use portfolio targets' })).toBeDisabled()
   await expect(page.getByRole('combobox', { name: 'Classify VNQ' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Add group' })).toHaveCount(0)
   await save.click()
   await expect.poll(() => overview.plan).toMatchObject({ groupingEnabled: false, targetsEnabled: false })
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+})
+
+test('a new account starts with no groups and builds a plan from nothing', async ({ page }) => {
+  await establishSession(page)
+  await mockApi(page)
+  const overview: InvestmentAllocationOverview = {
+    status: 'NotStarted', appCurrency: 'MYR',
+    plan: { groups: [], groupingEnabled: false, targetsEnabled: false, watchDrift: 3, alertDrift: 5 },
+    assignments: [{ instrumentId: 'a771aff3-5101-4a98-8a5e-9e72bbf119d9', symbol: 'VOO', name: 'S&P 500 ETF', order: 0 }],
+    sleeves: [], recommendations: [], incompleteReasons: [],
+    freshness: { isStale: false, hasMissingData: false, maxAgeMinutes: 60, staleInputs: [] },
+  }
+  await page.route('**/api/investments/allocation', route => route.fulfill({ json: overview }))
+  await page.route('**/api/investments/allocation/plan', async route => {
+    overview.plan = route.request().postDataJSON() as InvestmentPlan
+    await route.fulfill({ json: overview.plan })
+  })
+  await page.goto('/settings', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('tab', { name: 'Investment plan' }).click()
+  await expect(page.getByText('Off. Turn it on to add your first group.')).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'Use portfolio targets' })).toBeDisabled()
+  await expect(page.getByRole('combobox', { name: 'Classify VOO' })).toHaveCount(0)
+  await page.getByRole('switch', { name: 'Group investments' }).click()
+  for (const name of ['Shares', 'Bonds']) {
+    await page.getByRole('button', { name: 'Add group' }).click()
+    await page.getByRole('textbox', { name: 'Group name' }).fill(name)
+    await page.getByRole('button', { name: 'Add group' }).click()
+  }
+  await page.getByRole('switch', { name: 'Use portfolio targets' }).click()
+  await expect(page.getByRole('slider', { name: 'Shares target' })).toHaveValue('50')
+  await expect(page.getByRole('slider', { name: 'Shares target' })).toBeEnabled()
+  await page.getByRole('button', { name: 'Save investment plan' }).click()
+  await expect.poll(() => overview.plan).toMatchObject({ groupingEnabled: true, targetsEnabled: true })
+  expect(overview.plan.groups?.map(group => group.targetPercentage)).toEqual([50, 50])
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 

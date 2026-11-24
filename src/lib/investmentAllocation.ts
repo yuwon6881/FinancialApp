@@ -1,5 +1,5 @@
 import type { InvestmentAllocationStatus, InvestmentAllocationSleeve, InvestmentGroup, InvestmentInstrument, InvestmentPlan } from '../types'
-import { getInvestmentGroups, MAX_INVESTMENT_GROUPS } from './investmentGroups'
+import { getInvestmentGroups, groupingEnabled, hasCompleteTargets, MAX_INVESTMENT_GROUPS, targetsEnabled } from './investmentGroups'
 
 /**
  * `key` is what code groups and matches on; `label` is only ever shown to a person.
@@ -79,7 +79,9 @@ export function validateInvestmentPlan(plan: InvestmentPlan) {
   if (![...targets, ...driftBands].every(Number.isFinite)) return 'Targets and drift bands must be valid numbers.'
   if (groups.length > MAX_INVESTMENT_GROUPS) return `Use at most ${MAX_INVESTMENT_GROUPS} portfolio groups.`
   if (new Set(groups.map(group => group.label.trim().toLowerCase())).size !== groups.length) return 'Group names must be unique.'
-  if (targets.length > 0 && (targets.some(value => value <= 0) || targets.reduce((sum, value) => sum + Math.round(value * 100), 0) !== 10000))
+  if (targets.some(value => value < 0 || value > 100)) return 'Targets must be between 0% and 100%.'
+  // Mirrors the server: shares only have to form a mix while grouping and targets are both on.
+  if (groupingEnabled(plan) && targetsEnabled(plan) && groups.length > 0 && !hasCompleteTargets(groups))
     return 'Targets must be positive and total exactly 100%.'
   if (plan.watchDrift <= 0 || plan.alertDrift <= plan.watchDrift || plan.alertDrift > 100)
     return 'Alert drift must be greater than Watch drift and no more than 100 points.'

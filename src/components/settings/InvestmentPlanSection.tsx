@@ -12,11 +12,9 @@ import { Button } from '../ui/Button'
 import { MutationButtonContent } from '../ui/MutationButtonContent'
 import { RowSyncStatus } from '../ui/RowSyncBadge'
 import { validateInvestmentPlan } from '../../lib/investmentAllocation'
-import { getInvestmentGroups, groupingEnabled, resetGroupTargets, targetsEnabled } from '../../lib/investmentGroups'
-import { Checkbox } from '../ui/Checkbox'
-import { InvestmentGroupTargets } from './InvestmentGroupTargets'
-import { InvestmentGroupsEditor } from './InvestmentGroupsEditor'
-import { InvestmentDriftSettings } from './InvestmentDriftSettings'
+import { currentGroupMix, getInvestmentGroups, groupingEnabled, hasActiveTargets, hasCompleteTargets, releasedByRemoval, targetsEnabled, weightedGroupTargets } from '../../lib/investmentGroups'
+import { InvestmentTargetsPanel } from './InvestmentTargetsPanel'
+import { InvestmentGroupsPanel } from './InvestmentGroupsPanel'
 import { InvestmentClassificationRow } from './InvestmentClassificationRow'
 import { EmptyState } from '../ui/EmptyState'
 import { InvestmentPlanSettingsSkeleton } from '../ui/skeletons/InvestmentPlanSettingsSkeleton'
@@ -61,7 +59,25 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   const projectQueuedPlan = (value: InvestmentPlan) => {
     const queuedPlan = [...investmentOps].reverse().find(operation =>
       operation.entity === 'investmentPlan' && operation.type === 'update')
-    return queuedPlan?.payload ? { ...value, ...queuedPlan.payload } as InvestmentPlan : value
+    if (!queuedPlan?.payload) return value
+    // Undo bookkeeping travels with the payload but is not part of the plan itself.
+    const plan = Object.fromEntries(Object.entries(queuedPlan.payload)
+      .filter(([key]) => key !== 'restoreAssignments' && key !== 'undoSnapshot'))
+    return { ...value, ...plan } as InvestmentPlan
+  }
+  /** A queued plan save releases investments from removed groups, and an undo of one puts them back. */
+  const projectPlanAssignments = (plan: InvestmentPlan, assignments: InvestmentAllocationOverview['assignments']) => {
+    const queuedPlan = [...investmentOps].reverse().find(operation =>
+      operation.entity === 'investmentPlan' && operation.type === 'update')
+    if (!queuedPlan?.payload) return assignments
+    const keys = new Set(getInvestmentGroups(plan).map(group => group.key))
+    const restored = new Map((Array.isArray(queuedPlan.payload.restoreAssignments) ? queuedPlan.payload.restoreAssignments : [])
+      .flatMap((item: { instrumentId?: unknown; sleeve?: unknown }) =>
+        typeof item?.instrumentId === 'string' && typeof item.sleeve === 'string' && keys.has(item.sleeve)
+          ? [[item.instrumentId, item.sleeve as InvestmentAllocationSleeve] as const] : []))
+    return assignments.map(item => restored.has(item.instrumentId)
+      ? { ...item, sleeve: restored.get(item.instrumentId) }
+      : item.sleeve && !keys.has(item.sleeve) ? { ...item, sleeve: undefined } : item)
   }
   const projectQueuedChanges = (value: InvestmentAllocationOverview | null) => {
     if (!value) return null
@@ -77,10 +93,11 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
       ? queuedOrder.payload.instrumentIds.filter((id): id is string => typeof id === 'string')
       : []
     const positions = new Map(queuedIds.map((id, index) => [id, index]))
+    const plan = projectQueuedPlan(value.plan)
     return {
       ...value,
-      plan: projectQueuedPlan(value.plan),
-      assignments: value.assignments.map(assignment => queuedAssignments.has(assignment.instrumentId)
+      plan,
+      assignments: projectPlanAssignments(plan, value.assignments).map(assignment => queuedAssignments.has(assignment.instrumentId)
         ? { ...assignment, sleeve: queuedAssignments.get(assignment.instrumentId) }
         : assignment)
         .sort((left, right) =>
@@ -148,13 +165,17 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
           ? value.payload.sleeve as InvestmentAllocationSleeve
           : undefined]))
     if (queuedPlan?.payload || queuedAssignments.size > 0) {
-      setOverview(previous => previous ? {
-        ...previous,
-        plan: projectQueuedPlan(previous.plan),
-        assignments: previous.assignments.map(value => queuedAssignments.has(value.instrumentId)
-          ? { ...value, sleeve: queuedAssignments.get(value.instrumentId) }
-          : value),
-      } : previous)
+      setOverview(previous => {
+        if (!previous) return previous
+        const plan = projectQueuedPlan(previous.plan)
+        return {
+          ...previous,
+          plan,
+          assignments: projectPlanAssignments(plan, previous.assignments).map(value => queuedAssignments.has(value.instrumentId)
+            ? { ...value, sleeve: queuedAssignments.get(value.instrumentId) }
+            : value),
+        }
+      })
     }
   }, [investmentOps])
   useEffect(() => {
@@ -182,10 +203,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
 
   const groups = getInvestmentGroups(plan)
   const draftKeys = new Set(groups.map(group => group.key))
-  const assignedKeys = new Set(overview?.assignments.flatMap(assignment => assignment.sleeve ? [assignment.sleeve] : []))
-  const validation = [...assignedKeys].some(key => !draftKeys.has(key))
-    ? 'Unassign or move investments before removing their group.'
-    : validateInvestmentPlan(plan)
+  const validation = validateInvestmentPlan(plan)
 
   const save = () => {
     if (hideSensitive || validation || !overview) return
@@ -196,12 +214,22 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
       watchDrift: plan.watchDrift,
       alertDrift: plan.alertDrift,
     }
+    // The server releases investments from removed groups in the same save; undo puts them back.
+    const released = releasedByRemoval(groups, overview.assignments)
     const accepted = queueMutation('investmentPlan', 'update', 'three-fund', {
       ...payload,
-      undoSnapshot: { ...overview.plan, groups: getInvestmentGroups(overview.plan) },
+      undoSnapshot: {
+        ...overview.plan,
+        groups: getInvestmentGroups(overview.plan),
+        restoreAssignments: released.map(item => ({ instrumentId: item.instrumentId, sleeve: item.sleeve })),
+      },
     })
     if (!accepted) return
-    setOverview(previous => previous ? { ...previous, plan: { ...previous.plan, ...payload } } : previous)
+    setOverview(previous => previous ? {
+      ...previous,
+      plan: { ...previous.plan, ...payload },
+      assignments: previous.assignments.map(item => item.sleeve && !draftKeys.has(item.sleeve) ? { ...item, sleeve: undefined } : item),
+    } : previous)
     setDraft(null)
   }
 
@@ -288,62 +316,43 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   const grouping = groupingEnabled(plan)
   const targets = targetsEnabled(plan)
   const planBusy = !overview || planSyncing || planPending
+  const assignments = overview?.assignments ?? []
+  const assignedKeys = new Set(assignments.flatMap(assignment => assignment.sleeve ? [assignment.sleeve] : []))
   const classificationGroups = grouping && groupingEnabled(savedPlan)
     ? savedGroups.filter(group => draftKeys.has(group.key) || assignedKeys.has(group.key))
     : []
-  const hasNewGroups = groups.some(group => !savedGroups.some(saved => saved.key === group.key))
+  const unsavedGroups = grouping && groups.length > 0
+    && (!groupingEnabled(savedPlan) || groups.some(group => !savedGroups.some(saved => saved.key === group.key)))
+  const currentMix = currentGroupMix(groups, overview?.sleeves ?? [])
   const changeGroups = (groups: InvestmentPlan['groups']) => setPlan(previous => ({ ...previous, groups }))
-  const resetTargets = () => setPlan(previous => ({
-    ...previous,
-    groups: resetGroupTargets(getInvestmentGroups(previous), savedGroups),
-    watchDrift: savedPlan.watchDrift,
-    alertDrift: savedPlan.alertDrift,
-  }))
+  const changeTargets = (enabled: boolean) => setPlan(previous => {
+    const current = getInvestmentGroups(previous)
+    // The first mix a person sees follows what they already hold, or an even split without prices.
+    const seeded = enabled && !hasCompleteTargets(current) ? weightedGroupTargets(current, currentMix) : current
+    return { ...previous, targetsEnabled: enabled, groups: seeded }
+  })
 
   return (
-    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan" className="grid w-full min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-2">
-      <section aria-labelledby="investment-targets-title" className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-6')}>
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id="investment-targets-title" className="text-section text-foreground">Portfolio targets</h3>
-          {grouping && targets && groups.length > 0 && (
-            <Button variant="tertiary" size="sm" disabled={planBusy || !draft} onClick={resetTargets}>
-              <RotateCcw className="size-4" aria-hidden="true" /> Reset targets
-            </Button>
-          )}
-        </div>
-        <label className="flex min-h-11 cursor-pointer items-center gap-2 text-label text-foreground lg:min-h-9">
-          <Checkbox checked={targets} disabled={planBusy}
-            onChange={({ currentTarget: { checked } }) => setPlan(previous => ({ ...previous, targetsEnabled: checked }))} />
-          Enable portfolio targets
-        </label>
-        {grouping && targets && groups.length > 0 ? (
-          <>
-            <InvestmentGroupTargets groups={groups} disabled={planBusy} onChange={changeGroups} />
-            <InvestmentDriftSettings plan={plan} savedPlan={overview?.plan} setPlan={setPlan} hideSensitive={planBusy} />
-          </>
-        ) : (
-          <p className="text-caption text-muted-foreground">
-            {!targets ? 'Targets and drift alerts are off.' : !grouping
-              ? 'Enable investment grouping to use targets.' : 'Add an investment group to set its target.'}
-          </p>
-        )}
-      </section>
+    <div id="settings-panel-investment-plan" role="tabpanel" aria-labelledby="settings-tab-investment-plan"
+      className="grid w-full min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-2">
+      <InvestmentGroupsPanel enabled={grouping} groups={groups} assignments={assignments}
+        targetsActive={grouping && targets} disabled={planBusy} onChange={changeGroups}
+        onEnabledChange={enabled => setPlan(previous => ({ ...previous, groupingEnabled: enabled }))} />
 
-      <section aria-labelledby="investment-classification-title" className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-6')}>
+      <section aria-labelledby="investment-classification-title"
+        className={cn(panelClass, 'w-full min-w-0 p-4 sm:p-6 xl:col-start-2 xl:row-span-2 xl:row-start-1')}>
         <div className="min-w-0">
           <h3 id="investment-classification-title" className="flex flex-wrap items-center gap-2 text-section text-foreground">
             Investment classification <RowSyncStatus isSyncing={orderSyncing} isPending={orderPending} entityLabel="classification order" />
           </h3>
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 text-label text-foreground lg:min-h-9">
-            <Checkbox checked={grouping} disabled={planBusy}
-              onChange={({ currentTarget: { checked } }) => setPlan(previous => ({ ...previous, groupingEnabled: checked }))} />
-            Enable investment grouping
-          </label>
-          <p className="mt-1 text-caption text-muted-foreground">{grouping
-            ? 'Assign each holding to a group. Drag to set the order money is planned in.'
-            : 'Grouping is off. You can still reorder holdings.'}</p>
-          {grouping && (hasNewGroups || !groupingEnabled(savedPlan)) && groups.length > 0 &&
-            <p className="mt-1 text-caption text-muted-foreground">Save the investment plan to make these groups available for classification.</p>}
+          <p className="mt-1 text-caption text-muted-foreground">{classificationGroups.length > 0
+            ? 'Choose a group for each holding. Drag to set the order money is planned in.'
+            : 'Drag to set the order money is planned in.'}</p>
+          {unsavedGroups && (
+            <p className="mt-2 rounded-control inset-group p-3 text-caption text-muted-foreground">
+              Save the investment plan to sort holdings into {groupingEnabled(savedPlan) ? 'new groups' : 'these groups'}.
+            </p>
+          )}
         </div>
         <Reorder.Group
           axis="y"
@@ -376,10 +385,19 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
             <EmptyState density="compact" className="bg-transparent p-5" title="Add investments first, then return here to classify them." />
           )}
         </Reorder.Group>
-        {grouping && <InvestmentGroupsEditor groups={groups} assignedKeys={assignedKeys} disabled={planBusy} onChange={changeGroups} />}
       </section>
+
+      <InvestmentTargetsPanel enabled={targets} grouping={grouping} groups={groups}
+        savedTargetsActive={hasActiveTargets(savedPlan)} currentMix={currentMix}
+        plan={plan} savedPlan={overview?.plan} setPlan={setPlan} disabled={planBusy}
+        onEnabledChange={changeTargets} onGroupsChange={changeGroups} />
+
       <div className="flex flex-wrap items-center justify-end gap-3 xl:col-span-2">
         {(validation || error) && <p role="alert" className="mr-auto flex gap-2 text-caption text-destructive"><AlertCircle className="size-4 shrink-0" />{validation || error}</p>}
+        {draft && !validation && !error && <p role="status" className="mr-auto text-caption text-muted-foreground">You have unsaved changes.</p>}
+        <Button variant="tertiary" disabled={planBusy || !draft} onClick={() => setDraft(null)}>
+          <RotateCcw className="size-4" aria-hidden="true" /> Discard changes
+        </Button>
         <Button variant="primary" disabled={planBusy || Boolean(validation) || !draft} aria-busy={planSyncing} onClick={save}>
           <MutationButtonContent state={planSyncing ? 'syncing' : planPending ? 'pending' : null}
             entityLabel="investment plan" idleLabel="Save investment plan"
