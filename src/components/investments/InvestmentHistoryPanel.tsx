@@ -26,9 +26,10 @@ const tone = (value: number | undefined, digits: number) => {
  * start, overall and per market. Built from settled month-ends only, so a figure here never
  * moves once shown unless older activity is edited.
  */
-export function InvestmentHistoryPanel({ instruments, groups, masked, refreshToken }: {
+export function InvestmentHistoryPanel({ instruments, groups, showGroups = true, masked, refreshToken }: {
   instruments: InvestmentInstrument[]
   groups?: InvestmentGroup[]
+  showGroups?: boolean
   masked: boolean
   refreshToken: number
 }) {
@@ -93,7 +94,7 @@ export function InvestmentHistoryPanel({ instruments, groups, masked, refreshTok
           <ul className="mt-2 divide-y divide-border/60" aria-label="Each year">
             {shownYears.map(year => (
               <li key={year.year}>
-                <YearRow year={year} firstMonth={history.lifetime.firstMonth} scale={scale} masked={masked} money={money} signedMoney={signedMoney} percent={percent} marketName={marketName} />
+                <YearRow year={year} showGroups={showGroups} firstMonth={history.lifetime.firstMonth} scale={scale} masked={masked} money={money} signedMoney={signedMoney} percent={percent} marketName={marketName} />
               </li>
             ))}
           </ul>
@@ -106,7 +107,7 @@ export function InvestmentHistoryPanel({ instruments, groups, masked, refreshTok
             </div>
           )}
 
-          {history.lifetime.segments.length > 1 && (
+          {showGroups && history.lifetime.segments.length > 1 && (
             <div className="mt-5">
               <h3 className="text-subsection text-foreground">By market, since the start</h3>
               <SegmentList segments={history.lifetime.segments} money={money} signedMoney={signedMoney} percent={percent} marketName={marketName} />
@@ -141,8 +142,9 @@ type Formatters = {
   marketName: (segment: InvestmentHistorySegment) => string
 }
 
-function YearRow({ year, firstMonth, scale, masked, money, signedMoney, percent, marketName }: Formatters & {
+function YearRow({ year, showGroups, firstMonth, scale, masked, money, signedMoney, percent, marketName }: Formatters & {
   year: InvestmentHistoryYear
+  showGroups: boolean
   firstMonth?: string
   scale: number
   masked: boolean
@@ -187,7 +189,7 @@ function YearRow({ year, firstMonth, scale, masked, money, signedMoney, percent,
           <Pair label="Dividends" value={money(year.dividends)} />
           <Pair label="Gain or loss on sales"value={signedMoney(year.realisedProfitLoss)} />
         </dl>
-        {year.segments.length > 0 && (
+        {showGroups && year.segments.length > 0 && (
           <SegmentList segments={year.segments} money={money} signedMoney={signedMoney} percent={percent} marketName={marketName} />
         )}
         {year.missingReasons.length > 0 && (

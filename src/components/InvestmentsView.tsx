@@ -24,6 +24,7 @@ import { InvestmentPlanPanel } from './investments/InvestmentPlanPanel'
 import { ValueChart } from './investments/InvestmentCharts'
 import { AllocationChart } from './investments/AllocationChart'
 import type { AllocationFilter } from '../lib/investmentHoldingFilter'
+import { hasActiveGroups } from '../lib/investmentGroups'
 import { HoldingsTable, PagedActivityTable } from './investments/InvestmentTables'
 import { HoldingDetailSheet } from './investments/HoldingDetailSheet'
 import { InvestmentForecastPanel } from './investments/forecast/InvestmentForecastPanel'
@@ -336,7 +337,7 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
               <HoldingsTable
                 portfolio={portfolio}
                 masked={passiveMask}
-                filter={allocationFilter}
+                filter={allocationFilter?.mode === 'sleeve' && !hasActiveGroups(portfolio.allocation.plan) ? null : allocationFilter}
                 onClearFilter={() => setAllocationFilter(null)}
                 onSelectHolding={holding => setDetailHoldingKey({ accountId: holding.accountId, instrumentId: holding.instrumentId })}
               />
@@ -416,7 +417,8 @@ export const InvestmentsView: React.FC<InvestmentsViewProps> = ({
           )}
           {view === 'history' && (
             <div role="tabpanel" id="investment-view-history-panel" aria-labelledby="investment-view-history">
-              <InvestmentHistoryPanel instruments={portfolio.instruments} groups={portfolio.allocation.plan.groups} masked={passiveMask} refreshToken={activityRevision} />
+              <InvestmentHistoryPanel instruments={portfolio.instruments} groups={portfolio.allocation.plan.groups}
+                showGroups={hasActiveGroups(portfolio.allocation.plan)} masked={passiveMask} refreshToken={activityRevision} />
             </div>
           )}
           {view === 'activity' && (

@@ -31,7 +31,7 @@ export function buildSleeveIndex(instruments: InvestmentInstrument[], groups?: r
       ? {
           sleeve: instrument.allocationSleeve,
           key: instrument.allocationSleeve,
-          label: sleeveLabels.get(instrument.allocationSleeve) ?? names.get(instrument.allocationSleeve) ?? 'Unnamed group',
+          label: names.get(instrument.allocationSleeve) ?? (groups === undefined ? sleeveLabels.get(instrument.allocationSleeve) : undefined) ?? 'Unnamed group',
         }
       : unassignedSleeve,
   ]))
@@ -49,8 +49,8 @@ export function sleeveLabelFor(key: string, index: Map<string, SleeveIndexEntry>
   if (key === UNASSIGNED_SLEEVE_KEY) return unassignedSleeve.label
   // History can name a sleeve no current instrument sits in; it still needs a person's label.
   return [...index.values()].find(entry => entry.key === key)?.label
-    ?? sleeveLabels.get(key)
     ?? groups?.find(group => group.key === key)?.label
+    ?? (groups === undefined ? sleeveLabels.get(key) : undefined)
     ?? (/^[a-f\d]{32}$/i.test(key) ? 'Former group' : wordsFromCode(key))
 }
 
@@ -77,9 +77,9 @@ export function validateInvestmentPlan(plan: InvestmentPlan) {
   const targets = groups.map(group => group.targetPercentage)
   const driftBands = [plan.watchDrift, plan.alertDrift]
   if (![...targets, ...driftBands].every(Number.isFinite)) return 'Targets and drift bands must be valid numbers.'
-  if (groups.length < 1 || groups.length > MAX_INVESTMENT_GROUPS) return `Use between 1 and ${MAX_INVESTMENT_GROUPS} portfolio groups.`
+  if (groups.length > MAX_INVESTMENT_GROUPS) return `Use at most ${MAX_INVESTMENT_GROUPS} portfolio groups.`
   if (new Set(groups.map(group => group.label.trim().toLowerCase())).size !== groups.length) return 'Group names must be unique.'
-  if (targets.some(value => value <= 0) || targets.reduce((sum, value) => sum + Math.round(value * 100), 0) !== 10000)
+  if (targets.length > 0 && (targets.some(value => value <= 0) || targets.reduce((sum, value) => sum + Math.round(value * 100), 0) !== 10000))
     return 'Targets must be positive and total exactly 100%.'
   if (plan.watchDrift <= 0 || plan.alertDrift <= plan.watchDrift || plan.alertDrift > 100)
     return 'Alert drift must be greater than Watch drift and no more than 100 points.'

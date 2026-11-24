@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { InvestmentPortfolio } from '../../../types'
 import { formatCurrencyVal } from '../../../lib/utils'
-import { getInvestmentGroups } from '../../../lib/investmentGroups'
+import { getInvestmentGroups, hasActiveTargets } from '../../../lib/investmentGroups'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { LineChart } from 'lucide-react'
 import { ForecastControls } from './ForecastControls'
@@ -23,10 +23,12 @@ interface InvestmentForecastPanelProps {
 }
 
 export function InvestmentForecastPanel(props: InvestmentForecastPanelProps) {
-  if (getInvestmentGroups(props.portfolio.allocation.plan).some(group => !group.forecastClass)) {
+  const plan = props.portfolio.allocation.plan
+  if (!hasActiveTargets(plan) || getInvestmentGroups(plan).some(group => !group.forecastClass)) {
     return (
       <InvestmentToolRow icon={<LineChart className="size-4" />} title="Investment forecast" titleId="forecast-title"
-        subtitle="Choose a forecast assumption for each group under Settings → Investment plan." />
+        subtitle={hasActiveTargets(plan) ? 'Choose a forecast assumption for each group under Settings → Investment plan.'
+          : 'Set portfolio targets for your investment groups to use this forecast.'} />
     )
   }
   return <AvailableInvestmentForecast {...props} />

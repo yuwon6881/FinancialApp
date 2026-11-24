@@ -117,6 +117,38 @@ describe('InvestmentPlanSection sliders', () => {
     expect(screen.queryByRole('progressbar')).toBeNull()
   })
 
+  it('starts without groups and can save grouping independently of targets', () => {
+    const emptyPlan = { ...allocation, plan: { groups: [], groupingEnabled: false, targetsEnabled: false, watchDrift: 3, alertDrift: 5 } }
+    const queueMutation = vi.fn(() => true)
+    render(<AppProvider value={{ ...context, queueMutation }}><InvestmentPlanSection initialOverview={emptyPlan} /></AppProvider>)
+
+    expect(screen.queryByRole('button', { name: 'Add group' })).toBeNull()
+    expect(screen.queryByRole('slider')).toBeNull()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Enable investment grouping' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add group' }))
+    fireEvent.change(screen.getByRole('textbox', { name: 'Group name' }), { target: { value: 'Property' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add group' }))
+    expect(screen.queryByRole('slider')).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Save investment plan' }))
+    expect(queueMutation).toHaveBeenCalledWith('investmentPlan', 'update', 'three-fund', expect.objectContaining({
+      groups: [expect.objectContaining({ label: 'Property', targetPercentage: 100 })],
+      groupingEnabled: true,
+      targetsEnabled: false,
+    }))
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Property group' }))
+    expect(screen.getByText(/leave this list empty/)).toBeTruthy()
+  })
+
+  it('resets target edits back to the saved mix', () => {
+    render(<AppProvider value={context}><InvestmentPlanSection initialOverview={allocation} /></AppProvider>)
+    fireEvent.click(screen.getByRole('button', { name: 'Locked' }))
+    const us = screen.getByRole<HTMLInputElement>('slider', { name: 'US Equity target' })
+    fireEvent.change(us, { target: { value: '75' } })
+    expect(us.value).toBe('75')
+    fireEvent.click(screen.getByRole('button', { name: 'Reset targets' }))
+    expect(us.value).toBe('66')
+  })
+
   it('locks both drift sliders by default and unlocks individually', async () => {
     render(
       <AppProvider value={context}>

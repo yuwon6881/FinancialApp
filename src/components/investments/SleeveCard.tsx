@@ -38,7 +38,8 @@ export function SleeveCard({
   /** The basket's colour as a CSS value; shared with the planner and the target bars. */
   color: string
 }) {
-  const isPlannedBasket = 'targetPercentage' in sleeve
+  const isPlannedBasket = 'sleeve' in sleeve
+  const target = isPlannedBasket ? sleeve.targetPercentage ?? undefined : undefined
   const tone = STATUS_TONES[sleeve.status]
   const known = isPlannedBasket && sleeve.currentPercentage !== undefined
 
@@ -52,7 +53,7 @@ export function SleeveCard({
         {isPlannedBasket && (
           <span className="shrink-0 text-body font-semibold tabular-nums text-foreground">
             {known ? `${displayPercentage ?? sleeve.currentPercentage!.toFixed(1)}%` : <span className="font-normal text-muted-foreground">—</span>}
-            <span className="ml-1 text-caption font-normal text-muted-foreground">of {sleeve.targetPercentage}%</span>
+            {target !== undefined && <span className="ml-1 text-caption font-normal text-muted-foreground">of {target}%</span>}
           </span>
         )}
       </div>
@@ -63,15 +64,13 @@ export function SleeveCard({
             className="mt-2"
             total={100}
             segments={[{ value: Math.min(100, sleeve.currentPercentage ?? 0), color, label: sleeve.label }]}
-            markerPercent={sleeve.targetPercentage}
-            markerLabel={`Aim ${sleeve.targetPercentage}%`}
-            label={known
-              ? `${sleeve.label}: ${displayPercentage ?? sleeve.currentPercentage!.toFixed(1)}% held against an aim of ${sleeve.targetPercentage}%`
-              : `${sleeve.label}: aim ${sleeve.targetPercentage}%, current share unknown`}
+            markerPercent={target}
+            markerLabel={target === undefined ? undefined : `Aim ${target}%`}
+            label={`${sleeve.label}: ${known ? `${displayPercentage ?? sleeve.currentPercentage!.toFixed(1)}% held` : 'current share unknown'}${target === undefined ? '' : `, aim ${target}%`}`}
           />
           <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2">
             <p className="min-w-0 truncate text-caption text-muted-foreground">
-              {known || (sleeve.value ?? 0) > 0 ? money(sleeve.value) : 'Waiting on prices'}
+              {known || (target === undefined && sleeve.value != null) || (sleeve.value ?? 0) > 0 ? money(sleeve.value) : 'Waiting on prices'}
               {sleeve.driftPercentagePoints !== undefined
                 ? ` · ${Math.abs(sleeve.driftPercentagePoints) < 0.05 ? 'on target' : `${Math.abs(sleeve.driftPercentagePoints).toFixed(1)} percentage points ${sleeve.driftPercentagePoints > 0 ? 'above' : 'below'} target`}`
                 : ''}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { InvestmentPortfolio } from '../../types'
 import { buildSleeveIndex, sleeveOf } from '../../lib/investmentAllocation'
+import { hasActiveGroups } from '../../lib/investmentGroups'
 import { filterHoldings, type AllocationFilter, type AllocationMode } from '../../lib/investmentHoldingFilter'
 import { cn, formatCurrencyVal } from '../../lib/utils'
 import { Button } from '../ui/Button'
@@ -16,7 +17,9 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
   selected: AllocationFilter
   onSelect: (value: AllocationFilter) => void
 }) {
-  const [mode, setMode] = useState<AllocationMode>('sleeve')
+  const [preferredMode, setMode] = useState<AllocationMode>('sleeve')
+  const grouping = hasActiveGroups(portfolio.allocation.plan)
+  const mode = preferredMode === 'sleeve' && !grouping ? 'instrument' : preferredMode
   const sleeveIndex = useMemo(() => buildSleeveIndex(portfolio.instruments, portfolio.allocation.plan.groups),
     [portfolio.instruments, portfolio.allocation.plan.groups])
   // Each group carries the string a person reads (`label`) and the one the holdings
@@ -25,8 +28,8 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
   const groups = useMemo(() => {
     const map = new Map<string, { label: string; filterKey: string; value: number }>()
     const add = (label: string, filterKey: string, value: number) => {
-      const existing = map.get(label)
-      map.set(label, { label, filterKey, value: (existing?.value ?? 0) + value })
+      const existing = map.get(filterKey)
+      map.set(filterKey, { label, filterKey, value: (existing?.value ?? 0) + value })
     }
     portfolio.holdings.forEach(holding => {
       const sleeve = sleeveOf(holding, sleeveIndex)
@@ -41,7 +44,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
     portfolio.cashBalances.forEach(balance => {
       if (balance.amountApp === undefined || balance.amountApp <= 0) return
       const label = mode === 'account' ? balance.accountName : mode === 'currency' ? balance.currency : 'Cash'
-      add(label, label, balance.amountApp)
+      add(label, mode === 'account' || mode === 'currency' ? label : '', balance.amountApp)
     })
     return [...map.values()].sort((a, b) => b.value - a.value)
   }, [portfolio.holdings, portfolio.cashBalances, mode, sleeveIndex])
@@ -61,7 +64,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
     'var(--ledger-neutral-500)',
   ]
   const slices = groups.map((group, index) => ({
-    key: group.label,
+    key: group.filterKey,
     label: group.label,
     value: group.value,
     color: colors[index % colors.length],
@@ -72,7 +75,7 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
     { value: 'asset', label: 'Kind of investment' },
     { value: 'account', label: 'Account' },
     { value: 'currency', label: 'Currency' },
-  ]
+  ].filter(option => grouping || option.value !== 'sleeve') as Array<{ value: AllocationMode; label: string }>
   const selectedLabel = selected?.mode === mode
     ? groups.find(group => group.filterKey === selected.key)?.label
     : undefined
@@ -80,12 +83,11 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
     ? []
     : filterHoldings(portfolio.holdings, selected, sleeveIndex)
         .sort((left, right) => (right.valueApp ?? 0) - (left.valueApp ?? 0))
-  const selectSlice = (label: string) => {
-    if (label === 'Cash' && mode !== 'account') {
+  const selectSlice = (filterKey: string) => {
+    if (filterKey === '') {
       onSelect(null)
       return
     }
-    const filterKey = groups.find(group => group.label === label)?.filterKey ?? label
     onSelect(selected?.mode === mode && selected.key === filterKey ? null : { mode, key: filterKey })
   }
 
@@ -114,8 +116,8 @@ export function AllocationChart({ portfolio, masked, selected, onSelect }: {
             centerValue={money(total, portfolio.appCurrency)}
             formatValue={value => money(value, portfolio.appCurrency)}
             masked={masked}
-            selectedKey={selectedLabel}
-            onActivate={slice => selectSlice(slice.label)}
+            selectedKey={selected?.mode === mode ? selected.key : undefined}
+            onActivate={slice => selectSlice(slice.key)}
             chartClassName="mx-auto aspect-square w-full max-w-48 @xl:mx-0 @xl:w-44"
             // Scrolls rather than clips. "Individual fund" mode lists one row per holding, and
             // under overflow-hidden the rows past the panel's height were unreachable, so the

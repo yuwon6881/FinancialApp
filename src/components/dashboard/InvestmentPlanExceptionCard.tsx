@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronRight, PieChart } from 'lucide-react'
 import type { AppNavigationOptions } from '../../lib/appLocation'
 import type { AppTab, InvestmentAllocationOverview } from '../../types'
+import { hasActiveTargets } from '../../lib/investmentGroups'
 import { Button } from '../ui/Button'
 import { NoticeCard } from '../ui/NoticeCard'
 
@@ -13,7 +14,7 @@ export function InvestmentPlanExceptionCard({
   allocation,
   onNavigate,
 }: InvestmentPlanExceptionCardProps) {
-  if (!allocation || (allocation.status !== 'Alert' && allocation.status !== 'Incomplete')) return null
+  if (!allocation || !hasActiveTargets(allocation.plan) || (allocation.status !== 'Alert' && allocation.status !== 'Incomplete')) return null
 
   const incomplete = allocation.status === 'Incomplete'
   const alertSleeve = allocation.sleeves

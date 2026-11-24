@@ -211,9 +211,12 @@ export interface InvestmentPortfolio {
 export interface InvestmentPlan {
   id?: string
   groups?: InvestmentGroup[]
-  usEquityTarget: number
-  internationalExUsTarget: number
-  bondsTarget: number
+  groupingEnabled?: boolean
+  targetsEnabled?: boolean
+  /** Pre-group plans can still exist in the offline cache and outbox. */
+  usEquityTarget?: number
+  internationalExUsTarget?: number
+  bondsTarget?: number
   watchDrift: number
   alertDrift: number
   updatedAt?: string
@@ -233,7 +236,7 @@ export interface InvestmentAllocationOverview {
   sleeves: Array<{
     sleeve: InvestmentAllocationSleeve
     label: string
-    targetPercentage: number
+    targetPercentage?: number | null
     currentPercentage?: number
     value?: number
     driftPercentagePoints?: number

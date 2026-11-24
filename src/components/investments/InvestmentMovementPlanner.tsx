@@ -26,9 +26,11 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   const [amountText, setAmountText] = useState('')
   const [selections, setSelections] = useState<Record<string, string>>({})
   const requested = Number(amountText) || 0
+  const aimedSleeves = useMemo(() => allocation.sleeves.flatMap(sleeve =>
+    sleeve.targetPercentage == null ? [] : [{ ...sleeve, targetPercentage: sleeve.targetPercentage }]), [allocation.sleeves])
   const assignedInstruments = instruments.filter(instrument => !instrument.isArchived && instrument.allocationSleeve)
   const valuesKnown = allocation.status !== 'Incomplete'
-    && allocation.sleeves.every(sleeve => sleeve.value !== undefined)
+    && aimedSleeves.length > 0 && aimedSleeves.every(sleeve => sleeve.value !== undefined)
   const cashKnown = allocation.availableCash !== undefined
   const invested = allocation.investedValue ?? 0
   const canDeposit = valuesKnown && cashKnown && assignedInstruments.length > 0
@@ -40,7 +42,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
   const plan = useMemo(() => {
     if (!canPlan || requested <= 0) return null
     if (mode === 'deposit') {
-      const deposit = planDeposit(requested, allocation.sleeves.map(sleeve => ({
+      const deposit = planDeposit(requested, aimedSleeves.map(sleeve => ({
         sleeve: sleeve.sleeve,
         label: sleeve.label,
         targetPercentage: sleeve.targetPercentage,
@@ -55,7 +57,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
         worstProjectedDrift: deposit.worstProjectedDrift,
       }
     }
-    const withdrawal = planWithdrawal(requested, spareCash, allocation.sleeves.map(sleeve => ({
+    const withdrawal = planWithdrawal(requested, spareCash, aimedSleeves.map(sleeve => ({
       sleeve: sleeve.sleeve,
       label: sleeve.label,
       targetPercentage: sleeve.targetPercentage,
@@ -69,7 +71,7 @@ export function InvestmentMovementPlanner({ allocation, holdings, instruments, f
       projectedTotal: withdrawal.projectedTotal,
       worstProjectedDrift: withdrawal.worstProjectedDrift,
     }
-  }, [allocation.sleeves, canPlan, depositFunding.fromCash, mode, requested, spareCash])
+  }, [aimedSleeves, canPlan, depositFunding.fromCash, mode, requested, spareCash])
 
   const etfPlans = useMemo(() => plan ? buildEtfPlan(
     plan.sleeves.map(sleeve => ({ sleeve: sleeve.sleeve, amount: sleeve.amount })),

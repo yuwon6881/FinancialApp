@@ -76,7 +76,7 @@ export function InvestmentClassificationRow({
           <span className="block truncate text-caption text-muted-foreground">{value.name}</span>
         </div>
       </div>
-      <div className="w-full min-w-[10rem] flex-1 pl-9 sm:w-auto sm:max-w-[13rem] sm:pl-0">
+      {groups.length > 0 && <div className="w-full min-w-[10rem] flex-1 pl-9 sm:w-auto sm:max-w-[13rem] sm:pl-0">
         <CustomSelect
           ariaLabel={`Classify ${value.symbol}`}
           value={value.sleeve ?? ''}
@@ -88,7 +88,7 @@ export function InvestmentClassificationRow({
           ]}
           className="w-full"
         />
-      </div>
+      </div>}
     </Reorder.Item>
   )
 }

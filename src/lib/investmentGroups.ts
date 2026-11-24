@@ -1,12 +1,19 @@
 import type { InvestmentGroup, InvestmentPlan } from '../types'
 
 export function getInvestmentGroups(plan: InvestmentPlan): InvestmentGroup[] {
-  return plan.groups ?? [
+  if (plan.groups) return plan.groups
+  if (plan.usEquityTarget === undefined || plan.internationalExUsTarget === undefined || plan.bondsTarget === undefined) return []
+  return [
     { key: 'USEquity', label: 'US Equity', targetPercentage: plan.usEquityTarget, forecastClass: 'USEquity' },
     { key: 'InternationalExUS', label: 'International ex-US', targetPercentage: plan.internationalExUsTarget, forecastClass: 'InternationalExUS' },
     { key: 'Bonds', label: 'Bonds', targetPercentage: plan.bondsTarget, forecastClass: 'Bonds' },
   ]
 }
+
+export const groupingEnabled = (plan: InvestmentPlan) => plan.groupingEnabled ?? true
+export const targetsEnabled = (plan: InvestmentPlan) => plan.targetsEnabled ?? true
+export const hasActiveGroups = (plan: InvestmentPlan) => groupingEnabled(plan) && getInvestmentGroups(plan).length > 0
+export const hasActiveTargets = (plan: InvestmentPlan) => hasActiveGroups(plan) && targetsEnabled(plan)
 
 export const MAX_INVESTMENT_GROUPS = 20
 
@@ -62,7 +69,15 @@ export function changeGroupTarget(
 export function removeInvestmentGroup(groups: readonly InvestmentGroup[], key: string): InvestmentGroup[] {
   const remaining = groups.filter(group => group.key !== key)
   const scale = 1 / groupTargetStep(groups)
-  return remaining.length ? splitTargets(remaining, 100 * scale, scale) : [...groups]
+  return remaining.length ? splitTargets(remaining, 100 * scale, scale) : []
+}
+
+/** Restore the saved mix for the groups still present, then normalize after membership edits. */
+export function resetGroupTargets(groups: readonly InvestmentGroup[], saved: readonly InvestmentGroup[]) {
+  const weights = new Map(saved.map(group => [group.key, group.targetPercentage]))
+  const restored = groups.map(group => ({ ...group, targetPercentage: weights.get(group.key) ?? group.targetPercentage }))
+  const scale = 1 / groupTargetStep(restored)
+  return restored.length ? splitTargets(restored, 100 * scale, scale) : []
 }
 
 export const investmentGroupColor = (index: number) => [
