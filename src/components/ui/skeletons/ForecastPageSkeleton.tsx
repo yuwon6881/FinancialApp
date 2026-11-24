@@ -8,7 +8,10 @@ export function ForecastCyclesSkeleton() {
       <div className="grid auto-rows-fr gap-3 @min-[48rem]:grid-cols-2">
         {[0, 1, 2, 3].map(index => (
           <Panel key={index} className="@container min-w-0 space-y-3 p-3.5 sm:p-4">
-            <div className="space-y-1"><Skeleton className="h-5 w-28" /><Skeleton className="h-4 w-36" /></div>
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1"><Skeleton className="h-5 w-28" /><Skeleton className="h-4 w-36" /></div>
+              <Skeleton className="h-9 w-20 rounded-full" />
+            </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-2 @xl:grid-cols-4">
               {[0, 1, 2, 3].map(bucket => (
                 <div key={bucket} className="space-y-1"><Skeleton className="h-4 w-14 max-w-full" /><Skeleton className="h-5 w-20 max-w-full" /></div>

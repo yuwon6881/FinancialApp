@@ -3,7 +3,7 @@ import type { CashFlowForecast, ForecastScenario, ForecastScenarioItem } from '.
 import { fetchCashFlowForecast } from '../../../lib/api/forecast'
 import { getErrorMessage } from '../../../lib/errors'
 import {
-  addScenarioItem,
+  addScenarioItems,
   loadScenarioDraft,
   removeScenarioItem,
   saveScenarioDraft,
@@ -65,7 +65,7 @@ export function useForecastView(account: string, currency: string) {
     setCycles: (cycles: number) => update('cycles', cycles),
     setIncome: (incomePerCycle: number | null) => update('incomePerCycle', incomePerCycle),
     setEverydaySpending: (everydaySpendingPerCycle: number | null) => update('everydaySpendingPerCycle', everydaySpendingPerCycle),
-    addItem: (item: ForecastScenarioItem) => changeScenario(previous => addScenarioItem(previous, item)),
+    addItems: (items: ForecastScenarioItem[]) => changeScenario(previous => addScenarioItems(previous, items)),
     removeItem: (id: string) => changeScenario(previous => removeScenarioItem(previous, id)),
     toggleBill: (billKey: string) => changeScenario(previous => toggleSkippedBill(previous, billKey)),
     reset: () => changeScenario(previous => ({ ...previous, items: [], skippedBills: [] })),

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, ChevronRight, ShieldCheck, X } from 'lucide-react'
+import { AlertTriangle, ChevronRight, ShieldCheck, SlidersHorizontal, X } from 'lucide-react'
 import type { ForecastCycle, ForecastLine, ForecastSkippedBill } from '../../types'
 import { FORECAST_BUCKETS } from '../../types'
 import { formatForecastDate, formatForecastRange } from '../../lib/forecastScenario'
@@ -12,14 +12,21 @@ import { Panel } from '../ui/Panel'
 
 /** Show split income as one total and keep each scheduled payment or expense visible. */
 function toTimelineLines(lines: readonly ForecastLine[]): ForecastLine[] {
+  // Income split by the allocation settings arrives as one positive line per bucket under the
+  // same name and date. Only those are combined; money moved or added into a single bucket keeps
+  // its bucket, so a move reads as "out of Rewards" and "into Essentials".
+  const keyOf = (line: ForecastLine) => JSON.stringify([line.date, line.label])
+  const isIncomePart = (line: ForecastLine) => line.kind === 'Scenario' && line.amount > 0
+  const parts = new Map<string, number>()
+  for (const line of lines) if (isIncomePart(line)) parts.set(keyOf(line), (parts.get(keyOf(line)) ?? 0) + 1)
   const result: ForecastLine[] = []
   const income = new Map<string, ForecastLine>()
   for (const line of lines) {
-    if (line.kind !== 'Scenario' || line.amount <= 0) {
+    const key = keyOf(line)
+    if (!isIncomePart(line) || (parts.get(key) ?? 0) < 2) {
       result.push(line)
       continue
     }
-    const key = JSON.stringify([line.date, line.label])
     const existing = income.get(key)
     if (existing) {
       existing.amount = Math.round((existing.amount + line.amount) * 100) / 100
@@ -32,7 +39,7 @@ function toTimelineLines(lines: readonly ForecastLine[]): ForecastLine[] {
   return result
 }
 
-function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, lines, selectedSkippedBills, onToggleBill }: {
+function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, lines, selectedSkippedBills, onToggleBill, onAdjust }: {
   cycle: ForecastCycle
   currency: string
   masked: boolean
@@ -40,6 +47,7 @@ function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, lines, se
   lines: ForecastLine[]
   selectedSkippedBills: ReadonlySet<string>
   onToggleBill: (billKey: string) => void
+  onAdjust?: () => void
 }) {
   const [open, setOpen] = useState(false)
   const closeActivity = () => setOpen(false)
@@ -55,8 +63,15 @@ function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, lines, se
           <h3 className="text-subsection text-foreground">{cycle.label}</h3>
           <p className="text-caption text-muted-foreground">{range}</p>
         </div>
-        {!masked && isMilestone && (
-          <Badge tone="success"><ShieldCheck className="size-3" aria-hidden="true" /> Stability target reached</Badge>
+        {!masked && (isMilestone || onAdjust) && (
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {isMilestone && <Badge tone="success"><ShieldCheck className="size-3" aria-hidden="true" /> Stability target reached</Badge>}
+            {onAdjust && (
+              <Button variant="tertiary" size="sm" onClick={onAdjust} aria-label={`Adjust ${cycle.label}`} className="-my-1">
+                <SlidersHorizontal className="size-4" aria-hidden="true" /> Adjust
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -137,7 +152,7 @@ function ForecastCycleCard({ cycle, currency, masked, targetReachedOn, lines, se
 }
 
 export function ForecastTimeline({
-  cycles, currency, masked, targetReachedOn, skippedBills, selectedSkippedBills, onToggleBill,
+  cycles, currency, masked, targetReachedOn, skippedBills, selectedSkippedBills, onToggleBill, onAdjustCycle,
 }: {
   cycles: ForecastCycle[]
   currency: string
@@ -146,6 +161,8 @@ export function ForecastTimeline({
   skippedBills: ForecastSkippedBill[]
   selectedSkippedBills: string[]
   onToggleBill: (billKey: string) => void
+  /** Opens a what-if limited to one cycle's dates; omitted while no more what-ifs fit. */
+  onAdjustCycle?: (cycle: ForecastCycle) => void
 }) {
   const linesByCycle = useMemo(() => cycles.map(cycle => {
     if (masked) return []
@@ -169,7 +186,7 @@ export function ForecastTimeline({
         {cycles.map((cycle, index) => (
           <ForecastCycleCard key={cycle.start} cycle={cycle} currency={currency} masked={masked}
             targetReachedOn={targetReachedOn} selectedSkippedBills={skippedKeys} onToggleBill={onToggleBill}
-            lines={linesByCycle[index]} />
+            lines={linesByCycle[index]} onAdjust={onAdjustCycle && (() => onAdjustCycle(cycle))} />
         ))}
       </ol>
     </div>

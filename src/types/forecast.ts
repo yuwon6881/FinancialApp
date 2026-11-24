@@ -8,6 +8,8 @@ export interface ForecastScenarioItem {
   amount: number
   bucket: ForecastBucket | null
   label: string
+  /** Shared by the two halves of a move between buckets; client-only, never sent to the server. */
+  transferId?: string
 }
 
 /** Everything the Forecast workspace lets the user change. Never sent to the outbox. */

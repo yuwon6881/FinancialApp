@@ -7,6 +7,7 @@ import {
   FORECAST_MAX_ITEMS,
   FORECAST_MIN_CYCLES,
   formatForecastDate,
+  scenarioChangeRows,
   parseOptionalAmount,
 } from '../../lib/forecastScenario'
 import { Button } from '../ui/Button'
@@ -55,14 +56,14 @@ interface ForecastScenarioPanelProps {
   onCyclesChange: (cycles: number) => void
   onIncomeChange: (value: number | null) => void
   onEverydaySpendingChange: (value: number | null) => void
-  onAddItem: (item: ForecastScenarioItem) => void
+  onAddItems: (items: ForecastScenarioItem[]) => void
   onRemoveItem: (id: string) => void
   resetAction: ReactNode
 }
 
 export function ForecastScenarioPanel({
   scenario, today, horizonEnd, currency, masked,
-  onCyclesChange, onIncomeChange, onEverydaySpendingChange, onAddItem, onRemoveItem, resetAction,
+  onCyclesChange, onIncomeChange, onEverydaySpendingChange, onAddItems, onRemoveItem, resetAction,
 }: ForecastScenarioPanelProps) {
   const [adding, setAdding] = useState(false)
   const atLimit = scenario.items.length >= FORECAST_MAX_ITEMS
@@ -87,21 +88,22 @@ export function ForecastScenarioPanel({
       </div>
       <p className="text-caption text-muted-foreground">Both amounts apply once per cycle, starting next cycle.</p>
 
+
       {scenario.items.length > 0 && (
         <ul aria-label="What-if items" className="divide-y divide-border/60 border-t border-border">
-          {scenario.items.map(item => {
-            const outsideForecast = item.date < today || (horizonEnd !== undefined && item.date > horizonEnd)
+          {scenarioChangeRows(scenario.items).map(row => {
+            const outsideForecast = row.date < today || (horizonEnd !== undefined && row.date > horizonEnd)
             return (
-              <li key={item.id} className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 py-1.5">
+              <li key={row.id} className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1 py-1.5">
                 <span className="mr-auto min-w-0 flex-[1_1_8rem]">
-                  <span className="block wrap-anywhere text-body text-foreground">{item.label}</span>
+                  <span className="block wrap-anywhere text-body text-foreground">{row.label}</span>
                   <span className="block text-caption text-muted-foreground">
-                    {formatForecastDate(item.date)} · {item.bucket ?? 'Extra income'}{outsideForecast && ' · Outside forecast dates'}
+                    {formatForecastDate(row.date)} · {row.detail}{outsideForecast && ' · Outside forecast dates'}
                   </span>
                 </span>
-                <AmountText value={item.amount} currency={currency} signDisplay="always"
-                  tone={item.amount > 0 ? 'positive' : 'neutral'} className="text-body" />
-                <IconButton type="button" label={`Remove ${item.label}`} onClick={() => onRemoveItem(item.id)}>
+                <AmountText value={row.amount} currency={currency} signDisplay={row.isMove ? 'auto' : 'always'}
+                  tone={!row.isMove && row.amount > 0 ? 'positive' : 'neutral'} className="text-body" />
+                <IconButton type="button" label={`Remove ${row.label}`} onClick={() => onRemoveItem(row.id)}>
                   <Trash2 className="size-4" />
                 </IconButton>
               </li>
@@ -118,8 +120,8 @@ export function ForecastScenarioPanel({
         </Button>
       </div>
       {adding && (
-        <ForecastWhatIfSheet today={today} horizonEnd={horizonEnd} currency={currency}
-          onClose={() => setAdding(false)} onAddItem={item => { onAddItem(item); setAdding(false) }} />
+        <ForecastWhatIfSheet range={{ title: 'Add a what-if', min: today, max: horizonEnd }} currency={currency}
+          onClose={() => setAdding(false)} onAddItems={items => { onAddItems(items); setAdding(false) }} />
       )}
     </Panel>
   )

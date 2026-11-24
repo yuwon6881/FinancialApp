@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import type { ForecastScenarioItem } from '../../types'
+import type { ForecastBucket, ForecastScenarioItem } from '../../types'
 import { FORECAST_BUCKETS } from '../../types'
-import { buildScenarioItem, FORECAST_LABEL_MAX, type ScenarioItemDraft } from '../../lib/forecastScenario'
+import { buildScenarioChange, FORECAST_LABEL_MAX, type ScenarioChangeDraft, type ScenarioChangeKind } from '../../lib/forecastScenario'
 import { BottomSheet } from '../ui/BottomSheet'
 import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
@@ -10,37 +10,58 @@ import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
 import { ModalActions } from '../ui/ModalActions'
 
-const TARGET_OPTIONS: { value: ScenarioItemDraft['target']; label: string }[] = [
-  ...FORECAST_BUCKETS.map(bucket => ({ value: bucket, label: `Spend from ${bucket}` })),
-  { value: 'In', label: 'Extra income' },
+const KIND_OPTIONS: { value: ScenarioChangeKind; label: string }[] = [
+  { value: 'move', label: 'Move money between categories' },
+  { value: 'spend', label: 'Spend from a category' },
+  { value: 'add', label: 'Add money to a category' },
+  { value: 'income', label: 'Extra income' },
 ]
+const KIND_HINTS: Record<ScenarioChangeKind, string> = {
+  move: 'Your total stays the same; only where the money sits changes.',
+  spend: 'A one-off cost, such as a repair or a trip.',
+  add: 'Money that lands in one category, such as a gift kept for Rewards.',
+  income: 'Split using your income allocation settings.',
+}
+const BUCKET_OPTIONS = FORECAST_BUCKETS.map(bucket => ({ value: bucket, label: bucket }))
 
-export function ForecastWhatIfSheet({ today, horizonEnd, currency, onClose, onAddItem }: {
-  today: string
-  horizonEnd: string | undefined
+/** The dates one change may use: the whole forecast, or a single cycle opened from its card. */
+export interface ForecastWindow {
+  title: string
+  description?: string
+  min: string
+  max: string | undefined
+}
+
+export function ForecastWhatIfSheet({ range, initialKind = 'spend', currency, onClose, onAddItems }: {
+  range: ForecastWindow
+  initialKind?: ScenarioChangeKind
   currency: string
   onClose: () => void
-  onAddItem: (item: ForecastScenarioItem) => void
+  onAddItems: (items: ForecastScenarioItem[]) => void
 }) {
-  const [draft, setDraft] = useState<ScenarioItemDraft>({ label: '', date: today, amount: '', target: 'Essentials' })
+  const [draft, setDraft] = useState<ScenarioChangeDraft>({
+    kind: initialKind, label: '', date: range.min, amount: '', bucket: initialKind === 'move' ? 'Rewards' : 'Essentials', toBucket: 'Essentials',
+  })
   const [error, setError] = useState<string | null>(null)
+  const update = (change: Partial<ScenarioChangeDraft>) => { setDraft(previous => ({ ...previous, ...change })); setError(null) }
+  const isMove = draft.kind === 'move'
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    const result = buildScenarioItem(draft, crypto.randomUUID())
+    const result = buildScenarioChange(draft, () => crypto.randomUUID())
     if (typeof result === 'string') {
       setError(result)
       return
     }
-    if (result.date < today || (horizonEnd && result.date > horizonEnd)) {
-      setError('Pick a date within the forecast.')
+    if (draft.date < range.min || (range.max && draft.date > range.max)) {
+      setError(range.description ? 'Pick a date within this cycle.' : 'Pick a date within the forecast.')
       return
     }
-    onAddItem(result)
+    onAddItems(result)
   }
 
   return (
-    <BottomSheet isOpen title="Add a what-if" onClose={onClose} maxWidthClassName="max-w-xl"
+    <BottomSheet isOpen title={range.title} description={range.description} onClose={onClose} maxWidthClassName="max-w-xl"
       footer={(
         <ModalActions>
           <Button type="button" variant="secondary" size="md" onClick={onClose}>Cancel</Button>
@@ -48,23 +69,44 @@ export function ForecastWhatIfSheet({ today, horizonEnd, currency, onClose, onAd
         </ModalActions>
       )}>
       <form id="forecast-what-if-form" noValidate onSubmit={submit} className="space-y-4">
-        <FormField label="Name">
-          <Input value={draft.label} maxLength={FORECAST_LABEL_MAX} placeholder="e.g. Car repair"
-            onChange={event => setDraft({ ...draft, label: event.target.value })} />
+        <FormField label="Change" hint={KIND_HINTS[draft.kind]}>
+          <CustomSelect value={draft.kind} options={KIND_OPTIONS} className="w-full" ariaLabel="What-if type"
+            onChange={kind => update(kind === 'move' && draft.bucket === draft.toBucket
+              // A move needs two different buckets; keep the chosen one as the destination.
+              ? { kind, bucket: FORECAST_BUCKETS.find(bucket => bucket !== draft.toBucket) ?? draft.bucket }
+              : { kind })} />
         </FormField>
+        {isMove ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <FormField label="From">
+              <CustomSelect value={draft.bucket} options={BUCKET_OPTIONS} className="w-full" ariaLabel="Move from"
+                onChange={(bucket: ForecastBucket) => update({ bucket })} />
+            </FormField>
+            <FormField label="To">
+              <CustomSelect value={draft.toBucket} options={BUCKET_OPTIONS} className="w-full" ariaLabel="Move to"
+                onChange={(toBucket: ForecastBucket) => update({ toBucket })} />
+            </FormField>
+          </div>
+        ) : draft.kind !== 'income' && (
+          <FormField label="Category">
+            <CustomSelect value={draft.bucket} options={BUCKET_OPTIONS} className="w-full" ariaLabel="Category"
+              onChange={(bucket: ForecastBucket) => update({ bucket })} />
+          </FormField>
+        )}
         <div className="grid gap-3 sm:grid-cols-2">
           <FormField label={`Amount (${currency})`}>
             <Input inputMode="decimal" value={draft.amount} placeholder="0.00"
-              onChange={event => setDraft({ ...draft, amount: event.target.value })} />
+              onChange={event => update({ amount: event.target.value })} />
           </FormField>
           <FormField label="Date">
-            <DatePicker value={draft.date} min={today} max={horizonEnd} className="w-full"
-              onChange={date => setDraft({ ...draft, date })} />
+            <DatePicker value={draft.date} min={range.min} max={range.max} className="w-full"
+              onChange={date => update({ date })} />
           </FormField>
         </div>
-        <FormField label="Type" hint={draft.target === 'In' ? 'Split using your income allocation settings.' : undefined}>
-          <CustomSelect value={draft.target} options={TARGET_OPTIONS} className="w-full" ariaLabel="What-if type"
-            onChange={target => setDraft({ ...draft, target })} />
+        <FormField label={isMove ? 'Name (optional)' : 'Name'}>
+          <Input value={draft.label} maxLength={FORECAST_LABEL_MAX}
+            placeholder={isMove ? `Move ${draft.bucket} to ${draft.toBucket}` : 'e.g. Car repair'}
+            onChange={event => update({ label: event.target.value })} />
         </FormField>
         {error && <p role="alert" className="text-body text-destructive">{error}</p>}
       </form>

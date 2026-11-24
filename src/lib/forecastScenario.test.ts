@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
+import type { ForecastScenarioItem } from '../types'
 import {
   addScenarioItem,
+  addScenarioItems,
+  buildScenarioChange,
   buildScenarioItem,
   clampCycles,
   emptyScenario,
@@ -11,6 +14,7 @@ import {
   parseScenarioDraft,
   removeScenarioItem,
   saveScenarioDraft,
+  scenarioChangeRows,
   toggleSkippedBill,
 } from './forecastScenario'
 
@@ -107,5 +111,41 @@ describe('parseScenarioDraft', () => {
     expect(loadScenarioDraft('other', 'MYR')).toEqual(emptyScenario())
     expect(loadScenarioDraft('alex', 'USD')).toEqual(emptyScenario())
     localStorage.clear()
+  })
+})
+
+describe('moving money between buckets', () => {
+  const ids = () => { let next = 0; return () => `id-${++next}` }
+  const move = { kind: 'move' as const, label: '', date: '2026-12-28', amount: '1000', bucket: 'Rewards' as const, toBucket: 'Essentials' as const }
+
+  it('adds two linked lines that leave the total unchanged and names itself', () => {
+    const items = buildScenarioChange(move, ids())
+    expect(items).toEqual([
+      { id: 'id-2', label: 'Move Rewards to Essentials', date: '2026-12-28', amount: -1000, bucket: 'Rewards', transferId: 'id-1' },
+      { id: 'id-3', label: 'Move Rewards to Essentials', date: '2026-12-28', amount: 1000, bucket: 'Essentials', transferId: 'id-1' },
+    ])
+    expect(buildScenarioChange({ ...move, toBucket: 'Rewards' }, ids())).toBe('Choose two different categories.')
+  })
+
+  it('adds money straight into one bucket without splitting it', () => {
+    expect(buildScenarioChange({ ...move, kind: 'add', label: 'Gift' }, ids()))
+      .toEqual([{ id: 'id-1', label: 'Gift', date: '2026-12-28', amount: 1000, bucket: 'Rewards' }])
+  })
+
+  it('shows a move as one row and removes both halves together', () => {
+    const items = buildScenarioChange(move, ids()) as ForecastScenarioItem[]
+    const scenario = addScenarioItems(emptyScenario(), items)
+    expect(scenarioChangeRows(scenario.items)).toEqual([
+      { id: 'id-2', label: 'Move Rewards to Essentials', date: '2026-12-28', amount: 1000, detail: 'Rewards → Essentials', isMove: true },
+    ])
+    expect(removeScenarioItem(scenario, 'id-3').items).toEqual([])
+  })
+
+  it('never adds half a move when only one line fits, and drops a stored half', () => {
+    const full = { ...emptyScenario(), items: Array.from({ length: 49 }, (_, index) =>
+      ({ id: `x${index}`, label: 'x', date: '2026-12-10', amount: -1, bucket: 'Essentials' as const })) }
+    expect(addScenarioItems(full, buildScenarioChange(move, ids()) as ForecastScenarioItem[]).items).toHaveLength(49)
+    const [half] = buildScenarioChange(move, ids()) as ForecastScenarioItem[]
+    expect(parseScenarioDraft(JSON.stringify({ ...emptyScenario(), items: [half] })).items).toEqual([])
   })
 })

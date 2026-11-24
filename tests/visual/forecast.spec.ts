@@ -140,6 +140,18 @@ test('Forecast opens from its own shortcut and keeps what-ifs out of the records
   await expect(activity).toHaveCount(0)
   await expect(toggle).toBeFocused()
 
+  // A cycle's own Adjust opens a move limited to that cycle, sent as two linked lines.
+  await december.getByRole('button', { name: 'Adjust Dec 2026' }).click()
+  const adjust = page.getByRole('dialog', { name: 'Adjust Dec 2026' })
+  await expect(adjust.getByRole('combobox', { name: 'Move from' })).toBeVisible()
+  await adjust.getByRole('textbox', { name: 'Amount (MYR)' }).fill('1000')
+  await testInfo.attach('cycle-adjust', { body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png' })
+  await adjust.getByRole('button', { name: 'Add to forecast' }).click()
+  await expect.poll(() => requests.at(-1)?.items.map(item => [item.bucket, item.amount])).toEqual([
+    ['Essentials', -1800], ['Rewards', -1000], ['Essentials', 1000],
+  ])
+  await expect(page.getByRole('list', { name: 'What-if items' }).getByText(/Rewards → Essentials/)).toBeVisible()
+
   await page.getByRole('button', { name: 'Reset what-ifs' }).click()
   await expect.poll(() => requests.at(-1)?.items.length).toBe(0)
   await expect.poll(() => requests.at(-1)?.incomePerCycle).toBe(4800)

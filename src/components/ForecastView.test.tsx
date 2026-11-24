@@ -79,6 +79,23 @@ describe('ForecastView', () => {
     expect(screen.getByRole('button', { name: /Reset what-ifs/ })).toHaveProperty('disabled', false)
   })
 
+  it('moves money between buckets inside one cycle from its card', async () => {
+    renderView()
+    await screen.findByRole('heading', { name: 'Dec 2026' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Adjust Dec 2026' }))
+    expect(await screen.findByRole('dialog', { name: 'Adjust Dec 2026' })).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Amount (MYR)'), { target: { value: '1000' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add to forecast' }))
+
+    await waitFor(() => expect(lastScenario().items).toHaveLength(2))
+    expect(lastScenario().items).toEqual([
+      expect.objectContaining({ label: 'Move Rewards to Essentials', amount: -1000, bucket: 'Rewards' }),
+      expect.objectContaining({ label: 'Move Rewards to Essentials', amount: 1000, bucket: 'Essentials' }),
+    ])
+    expect(screen.getByText(/Rewards → Essentials/)).toBeTruthy()
+  })
+
   it('updates a bill toggle in the activity dialog while the server response is pending', async () => {
     vi.useFakeTimers()
     try {

@@ -3,11 +3,12 @@ import { AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react'
 import type { ForecastCycle } from '../types'
 import { firstShortfalls } from '../lib/forecastSummary'
 import { useAppPrefs } from '../contexts/AppContext'
-import { isScenarioChanged, formatForecastDate } from '../lib/forecastScenario'
+import { FORECAST_MAX_ITEMS, formatForecastRange, isScenarioChanged, formatForecastDate } from '../lib/forecastScenario'
 import { financialDate } from '../lib/financialDate'
 import { useForecastView } from './forecast/view/useForecastView'
 import { ForecastScenarioPanel } from './forecast/ForecastScenarioPanel'
 import { ForecastTimeline } from './forecast/ForecastTimeline'
+import { ForecastWhatIfSheet } from './forecast/ForecastWhatIfSheet'
 import { AlertBanner } from './ui/AlertBanner'
 import { AmountText } from './ui/AmountText'
 import { Button } from './ui/Button'
@@ -25,6 +26,7 @@ export function ForecastView({ account }: { account: string }) {
 function ForecastWorkspace({ account, currency, masked }: { account: string; currency: string; masked: boolean }) {
   const view = useForecastView(account, currency)
   const [assumptionsOpen, setAssumptionsOpen] = useState(false)
+  const [adjusting, setAdjusting] = useState<ForecastCycle | null>(null)
   const { scenario, forecast } = view
   const today = forecast?.today ?? financialDate()
   const projection = forecast?.forecast
@@ -46,7 +48,7 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
         onCyclesChange={view.setCycles}
         onIncomeChange={view.setIncome}
         onEverydaySpendingChange={view.setEverydaySpending}
-        onAddItem={view.addItem}
+        onAddItems={view.addItems}
         onRemoveItem={view.removeItem}
         resetAction={!masked && isScenarioChanged(scenario) && (
           <Button type="button" variant="tertiary" size="sm" onClick={view.reset}>
@@ -78,7 +80,8 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
           {forecast && projection
             ? <ForecastTimeline key={masked ? 'hidden' : 'visible'} cycles={projection.cycles} currency={currency} masked={masked}
                 targetReachedOn={projection.stabilityTargetReachedOn}
-                skippedBills={forecast.skippedBills} selectedSkippedBills={scenario.skippedBills} onToggleBill={view.toggleBill} />
+                skippedBills={forecast.skippedBills} selectedSkippedBills={scenario.skippedBills} onToggleBill={view.toggleBill}
+                onAdjustCycle={scenario.items.length + 2 <= FORECAST_MAX_ITEMS ? setAdjusting : undefined} />
             : !view.error && <div role="status" aria-label="Loading forecast"><ForecastCyclesSkeleton /></div>}
         </div>
 
@@ -99,6 +102,18 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
           </DetailDisclosure>
         )}
       </section>
+      {adjusting && !masked && (
+        // A cycle's change may only fall inside that cycle, and never before today.
+        <ForecastWhatIfSheet key={adjusting.start} initialKind="move" currency={currency}
+          range={{
+            title: `Adjust ${adjusting.label}`,
+            description: formatForecastRange(adjusting.start, adjusting.end),
+            min: adjusting.start > today ? adjusting.start : today,
+            max: adjusting.end,
+          }}
+          onClose={() => setAdjusting(null)}
+          onAddItems={items => { view.addItems(items); setAdjusting(null) }} />
+      )}
     </PageContainer>
   )
 }
