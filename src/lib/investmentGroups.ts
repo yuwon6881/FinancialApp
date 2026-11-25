@@ -86,7 +86,8 @@ export function removeInvestmentGroup(groups: readonly InvestmentGroup[], key: s
 /** Adds a group, taking a small share from the others only while the mix is in use. */
 export function addInvestmentGroup(groups: readonly InvestmentGroup[], label: string, targetsActive: boolean): InvestmentGroup[] {
   const added: InvestmentGroup = { key: crypto.randomUUID().replaceAll('-', ''), label, targetPercentage: 0, forecastClass: null }
-  if (!targetsActive || !hasCompleteTargets(groups)) return [...groups, added]
+  if (!targetsActive) return [...groups, added]
+  if (!hasCompleteTargets(groups)) return weightedGroupTargets([...groups, added])
   return changeGroupTarget([...groups, added], added.key, 5)
 }
 

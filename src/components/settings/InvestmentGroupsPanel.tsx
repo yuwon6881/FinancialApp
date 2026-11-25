@@ -1,21 +1,13 @@
 import { useState } from 'react'
 import { Info, Plus, Trash2 } from 'lucide-react'
-import type { InvestmentAllocationOverview, InvestmentForecastClass, InvestmentGroup } from '../../types'
+import type { InvestmentAllocationOverview, InvestmentGroup } from '../../types'
 import { addInvestmentGroup, investmentGroupColor, MAX_INVESTMENT_GROUPS, releasedByRemoval, removeInvestmentGroup } from '../../lib/investmentGroups'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/Button'
-import { CustomSelect } from '../ui/CustomSelect'
 import { IconButton } from '../ui/IconButton'
 import { Input } from '../ui/Input'
 import { PillSwitch } from '../ui/PillSwitch'
 import { panelClass } from '../ui/panelStyles'
-
-const forecastOptions: Array<{ value: InvestmentForecastClass | ''; label: string }> = [
-  { value: '', label: 'No forecast assumption' },
-  { value: 'USEquity', label: 'US shares' },
-  { value: 'InternationalExUS', label: 'Shares outside the US' },
-  { value: 'Bonds', label: 'Bonds' },
-]
 
 type Assignment = InvestmentAllocationOverview['assignments'][number]
 
@@ -60,7 +52,7 @@ export function InvestmentGroupsPanel({ enabled, onEnabledChange, groups, assign
 
       {!enabled ? (
         <p className="mt-3 rounded-control inset-group p-3 text-caption text-muted-foreground">
-          {counts.size > 0
+          {groups.length > 0
             ? 'Off. Turning it back on restores your groups.'
             : 'Off. Turn it on to add your first group.'}
         </p>
@@ -75,8 +67,8 @@ export function InvestmentGroupsPanel({ enabled, onEnabledChange, groups, assign
               {groups.map((group, index) => {
                 const count = counts.get(group.key) ?? 0
                 return (
-                  <li key={group.key} className="flex flex-wrap items-center gap-2 py-2">
-                    <span className="flex min-w-[8rem] flex-1 items-center gap-2">
+                  <li key={group.key} className="flex items-center gap-2 py-2">
+                    <span className="flex min-w-0 flex-1 items-center gap-2">
                       <span aria-hidden="true" className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: investmentGroupColor(index) }} />
                       <span className="min-w-0">
                         <span className="block wrap-anywhere text-label text-foreground">{group.label}</span>
@@ -85,9 +77,6 @@ export function InvestmentGroupsPanel({ enabled, onEnabledChange, groups, assign
                         </span>
                       </span>
                     </span>
-                    <CustomSelect ariaLabel={`Forecast assumption for ${group.label}`} disabled={disabled}
-                      value={group.forecastClass ?? ''} options={forecastOptions}
-                      onChange={value => onChange(groups.map(item => item.key === group.key ? { ...item, forecastClass: value || null } : item))} />
                     <IconButton label={`Remove ${group.label} group`} disabled={disabled} tooltip="Remove group"
                       onClick={() => onChange(removeInvestmentGroup(groups, group.key))}
                       className="text-muted-foreground hover:text-destructive">

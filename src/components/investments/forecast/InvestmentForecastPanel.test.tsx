@@ -171,6 +171,22 @@ describe('InvestmentForecastPanel', () => {
     expect(screen.queryByText(/Half of the 10,000 simulated outcomes ended above this amount/)).toBeNull()
   })
 
+  it('runs a custom group forecast after the user enters assumptions', () => {
+    const custom = portfolio()
+    custom.allocation.plan.groups = [{ key: 'property', label: 'Property', targetPercentage: 100, forecastClass: null }]
+    render(<InvestmentForecastPanel portfolio={custom} masked={false} />)
+    fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))
+    expect(screen.queryByLabelText('Forecast years')).toBeNull()
+    fireEvent.change(screen.getByLabelText('Property annual return (%)'), { target: { value: '6' } })
+    fireEvent.change(screen.getByLabelText('Property annual volatility (%)'), { target: { value: '12' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Apply assumptions' }))
+    expect(screen.getByLabelText('Forecast years')).toBeTruthy()
+    expect(useInvestmentForecast).toHaveBeenLastCalledWith(
+      expect.objectContaining({ annualReturn: 0.06, annualVolatility: 0.12, weights: { property: 1 } }),
+      expect.any(Object), true,
+    )
+  })
+
   it('does not treat uninvested cash as an observed monthly pace', () => {
     render(<InvestmentForecastPanel portfolio={portfolio(true)} masked={false} />)
     fireEvent.click(screen.getByRole('button', { name: /Investment forecast/ }))

@@ -18,19 +18,24 @@ const model = (annualReturn = 0, annualVolatility = 0): ForecastModel => ({
   annualReturn,
   annualVolatility,
   weights: { USEquity: 0.66, InternationalExUS: 0.1, Bonds: 0.24 },
-  assumptionId: 'test',
 })
 
 describe('investment forecast model', () => {
-  it('uses chosen forecast assumptions for custom groups and rejects a missing assumption', () => {
-    const plan = { usEquityTarget: 66, internationalExUsTarget: 10, bondsTarget: 24, watchDrift: 3, alertDrift: 5 }
+  it('weights user assumptions by custom group targets and waits for missing inputs', () => {
     const groups = [
-      { key: 'a', label: 'Shares', targetPercentage: 60, forecastClass: 'USEquity' as const },
-      { key: 'b', label: 'Funds', targetPercentage: 40, forecastClass: 'Bonds' as const },
+      { key: 'a', label: 'Property', targetPercentage: 60, forecastClass: null },
+      { key: 'b', label: 'Cash', targetPercentage: 40, forecastClass: null },
     ]
-    expect(buildForecastModel({ ...plan, groups }).weights).toEqual({ USEquity: 0.6, InternationalExUS: 0, Bonds: 0.4 })
-    expect(() => buildForecastModel({ ...plan, groups: [groups[0], { ...groups[1], forecastClass: null }] })).toThrow(/forecast assumption/)
+    const plan = { groups, watchDrift: 3, alertDrift: 5 }
+    const assumptions = new Map([['a', { annualReturn: 0.07, annualVolatility: 0.2 }]])
+    expect(buildForecastModel(plan, assumptions)).toBeNull()
+    assumptions.set('b', { annualReturn: 0.02, annualVolatility: 0 })
+    const model = buildForecastModel(plan, assumptions)
+    expect(model?.weights).toEqual({ a: 0.6, b: 0.4 })
+    expect(model?.annualReturn).toBeCloseTo(0.05)
+    expect(model?.annualVolatility).toBeCloseTo(0.12)
   })
+
   it('weights the researched return and conservative volatility by the investment plan', () => {
     const result = buildForecastModel({
       usEquityTarget: 66,
@@ -40,8 +45,8 @@ describe('investment forecast model', () => {
       alertDrift: 5,
     })
 
-    expect(result.annualReturn).toBeCloseTo(0.05134, 8)
-    expect(result.annualVolatility).toBeCloseTo(0.13254, 8)
+    expect(result?.annualReturn).toBeCloseTo(0.05134, 8)
+    expect(result?.annualVolatility).toBeCloseTo(0.13254, 8)
   })
 
   it('changes when plan weights change and normalizes imperfect totals', () => {
@@ -52,8 +57,8 @@ describe('investment forecast model', () => {
       watchDrift: 3,
       alertDrift: 5,
     })
-    expect(allBonds.annualReturn).toBeCloseTo(0.048)
-    expect(allBonds.annualVolatility).toBeCloseTo(0.062)
+    expect(allBonds?.annualReturn).toBeCloseTo(0.048)
+    expect(allBonds?.annualVolatility).toBeCloseTo(0.062)
   })
 
   it('generates deterministic annual coefficients and retains no monthly matrix', () => {

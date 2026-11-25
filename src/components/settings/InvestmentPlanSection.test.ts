@@ -32,6 +32,10 @@ describe('default portfolio targets', () => {
     expect(currentGroupMix(groups.slice(0, 2), sleeves)).toEqual(new Map([['USEquity', 50], ['InternationalExUS', 50]]))
   })
 
+  it('starts a replacement group at 100% when targets are still enabled', () => {
+    expect(weights(addInvestmentGroup([], 'Property', true))).toEqual([100])
+  })
+
   it('leaves shares alone while targets are off and adds new groups at zero', () => {
     const off = groups.map(group => ({ ...group, targetPercentage: 0 }))
     expect(weights(removeInvestmentGroup(off, 'Bonds'))).toEqual([0, 0])

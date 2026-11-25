@@ -12,7 +12,7 @@ interface ForecastRequest {
   targetValue: number
 }
 
-export function useInvestmentForecast(model: ForecastModel, request: ForecastRequest, enabled: boolean) {
+export function useInvestmentForecast(model: ForecastModel | null, request: ForecastRequest, enabled: boolean) {
   const workerRef = useRef<Worker | null>(null)
   const latestRequestRef = useRef(0)
   const [ready, setReady] = useState(false)
@@ -21,7 +21,7 @@ export function useInvestmentForecast(model: ForecastModel, request: ForecastReq
   const [initializationMs, setInitializationMs] = useState<number | null>(null)
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled || !model) return
     if (typeof Worker === 'undefined') {
       setError('Forecasting is not supported on this device.')
       return
@@ -60,7 +60,7 @@ export function useInvestmentForecast(model: ForecastModel, request: ForecastReq
       worker.terminate()
       workerRef.current = null
     }
-  }, [enabled, model.annualReturn, model.annualVolatility, model.assumptionId])
+  }, [enabled, model?.annualReturn, model?.annualVolatility])
 
   useEffect(() => {
     if (!enabled || !ready || !workerRef.current) return

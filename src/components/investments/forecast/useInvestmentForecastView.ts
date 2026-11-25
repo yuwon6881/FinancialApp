@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { InvestmentPortfolio } from '../../../types'
 import {
-  FORECAST_ASSUMPTIONS,
+  FORECAST_DEFAULT_INFLATION,
   FORECAST_DEFAULT_YEARS,
   FORECAST_MAX_MONTHLY_CONTRIBUTION,
   FORECAST_MAX_TARGET,
-  buildForecastModel,
+  type ForecastModel,
   contributionsInTodayMoney,
   inflationFactor,
   medianCompoundValue,
@@ -22,22 +22,17 @@ import { useInvestmentForecast } from './useInvestmentForecast'
  * line the user never chose and, because the target shares the chart's y-scale,
  * would squash the real forecast to make room for an invented number.
  */
-export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearViewport: boolean) {
+export function useInvestmentForecastView(portfolio: InvestmentPortfolio, model: ForecastModel | null, nearViewport: boolean) {
   const startValue = Math.max(0, portfolio.summary.totalValue ?? 0)
   const observedContribution = Math.max(
     0,
     portfolio.allocation.contributionPlan?.routineContribution ?? 0,
   )
-  const model = useMemo(
-    () => buildForecastModel(portfolio.allocation.plan),
-    [portfolio.allocation.plan],
-  )
-
   const [years, setYears] = useState(FORECAST_DEFAULT_YEARS)
   const [monthlyContribution, setMonthlyContributionState] = useState(
     Math.min(observedContribution, FORECAST_MAX_MONTHLY_CONTRIBUTION),
   )
-  const [inflationPercent, setInflationPercent] = useState(FORECAST_ASSUMPTIONS.defaultInflation * 100)
+  const [inflationPercent, setInflationPercent] = useState(FORECAST_DEFAULT_INFLATION * 100)
   const [todayMoney, setTodayMoney] = useState(false)
   const [targetToday, setTargetToday] = useState<number | null>(null)
 
@@ -86,7 +81,7 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
 
   const suggestedTargetToday = () => {
     const nominal = niceCeiling(forecast.result?.ending.median
-      ?? medianCompoundValue(startValue, monthlyContribution, years, model.annualReturn))
+      ?? medianCompoundValue(startValue, monthlyContribution, years, model?.annualReturn ?? 0))
     return nominal / targetFactor
   }
   const targetMax = todayMoney ? targetMaxToday : FORECAST_MAX_TARGET
@@ -95,7 +90,6 @@ export function useInvestmentForecastView(portfolio: InvestmentPortfolio, nearVi
   const contributionMax = FORECAST_MAX_MONTHLY_CONTRIBUTION
 
   return {
-    model,
     forecast,
     startValue,
     years,

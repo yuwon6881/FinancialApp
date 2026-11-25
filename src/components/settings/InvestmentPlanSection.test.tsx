@@ -193,6 +193,21 @@ describe('InvestmentPlanSection sliders', () => {
     }))
   })
 
+  it('projects a queued group removal after an earlier classification into that group', () => {
+    const initialOverview = { ...allocation, assignments: [
+      { instrumentId: 'bnd', symbol: 'BND', name: 'Bonds fund', order: 0 },
+    ] }
+    const operations: AppContextValue['operations'] = [
+      { id: 'remove', entity: 'investmentPlan', type: 'update', targetId: 'three-fund', createdAt: 2, retryCount: 0,
+        payload: { groups: [{ key: 'USEquity', label: 'US Equity', targetPercentage: 100, forecastClass: null }] } },
+      { id: 'assign', entity: 'investmentAllocation', type: 'update', targetId: 'bnd', createdAt: 1, retryCount: 0,
+        payload: { sleeve: 'Bonds' } },
+    ]
+    render(<AppProvider value={{ ...context, isOffline: true, operations }}><InvestmentPlanSection initialOverview={initialOverview} /></AppProvider>)
+    expect(screen.getByRole('combobox', { name: 'Classify BND' }).textContent).toContain('Unassigned')
+    expect(screen.queryByText(/Saving moves BND to Not sorted/)).toBeNull()
+  })
+
   it('locks both drift sliders by default and unlocks individually', async () => {
     render(
       <AppProvider value={context}>

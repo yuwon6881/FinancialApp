@@ -17,7 +17,7 @@ export function InvestmentPlanSettingsSkeleton() {
     <div role="status" aria-label="Loading investment plan" className="grid w-full min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-2">
       <div className={cn(panelClass, 'min-w-0 space-y-4 p-4 sm:p-6')} aria-hidden="true">
         <PanelHeader title="w-36" />
-        {[1, 2, 3].map(row => <div key={row} className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 py-2"><Skeleton className="h-4 w-28" /><Skeleton className="h-11 w-40 max-w-full rounded-control" /></div>)}
+        {[1, 2, 3].map(row => <div key={row} className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 py-2"><Skeleton className="h-4 w-28" /><Skeleton className="size-11 rounded-control lg:size-9" /></div>)}
         <Skeleton className="ml-auto h-11 w-28 rounded-full lg:h-9" />
       </div>
       <div className={cn(panelClass, 'min-w-0 space-y-3 p-4 sm:p-6 xl:col-start-2 xl:row-span-2 xl:row-start-1')} aria-hidden="true">

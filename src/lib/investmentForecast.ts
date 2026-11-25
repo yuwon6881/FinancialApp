@@ -1,4 +1,4 @@
-import type { InvestmentForecastClass, InvestmentPlan } from '../types'
+import type { InvestmentForecastClass, InvestmentGroup, InvestmentPlan } from '../types'
 import { getInvestmentGroups } from './investmentGroups'
 
 export const FORECAST_MIN_YEARS = 5
@@ -8,24 +8,13 @@ const FORECAST_PATHS = 10_000
 export const FORECAST_MAX_TARGET = 10_000_000
 export const FORECAST_MAX_MONTHLY_CONTRIBUTION = 10_000
 
-interface ForecastAssetAssumption {
-  key: InvestmentForecastClass
-  label: string
+export interface ForecastGroupAssumption {
   annualReturn: number
   annualVolatility: number
 }
 
-export interface ForecastAssumptionSet {
-  id: string
-  defaultInflation: number
-  assets: ForecastAssetAssumption[]
-}
-
-export interface ForecastModel {
-  annualReturn: number
-  annualVolatility: number
-  weights: Record<ForecastAssetAssumption['key'], number>
-  assumptionId: string
+export interface ForecastModel extends ForecastGroupAssumption {
+  weights: Record<string, number>
 }
 
 export interface ForecastCoefficients {
@@ -51,43 +40,40 @@ export interface ForecastResult {
   targetChance: number
 }
 
-export const FORECAST_ASSUMPTIONS: ForecastAssumptionSet = {
-  id: 'vanguard-vcmm-2026-q2',
-  defaultInflation: 0.02,
-  assets: [
-    { key: 'USEquity', label: 'U.S. shares', annualReturn: 0.052, annualVolatility: 0.151 },
-    { key: 'InternationalExUS', label: 'International shares', annualReturn: 0.055, annualVolatility: 0.18 },
-    { key: 'Bonds', label: 'Bonds', annualReturn: 0.048, annualVolatility: 0.062 },
-  ],
+export const FORECAST_DEFAULT_INFLATION = 0.02
+
+// Preserve the previous Vanguard VCMM 2026 Q2 inputs for groups with a saved preset.
+const legacyAssumptions: Record<InvestmentForecastClass, ForecastGroupAssumption> = {
+  USEquity: { annualReturn: 0.052, annualVolatility: 0.151 },
+  InternationalExUS: { annualReturn: 0.055, annualVolatility: 0.18 },
+  Bonds: { annualReturn: 0.048, annualVolatility: 0.062 },
 }
 
-export function buildForecastModel(plan: InvestmentPlan): ForecastModel {
-  const rawWeights: Record<ForecastAssetAssumption['key'], number> = {
-    USEquity: 0,
-    InternationalExUS: 0,
-    Bonds: 0,
-  }
-  for (const group of getInvestmentGroups(plan)) {
-    if (!group.forecastClass) throw new Error('Every portfolio group needs a forecast assumption.')
-    rawWeights[group.forecastClass] += Math.max(0, group.targetPercentage)
-  }
-  const total = Object.values(rawWeights).reduce((sum, value) => sum + value, 0)
-  const weights = Object.fromEntries(
-    Object.entries(rawWeights).map(([key, value]) => [key, total > 0 ? value / total : 1 / 3]),
-  ) as ForecastModel['weights']
+export function forecastGroupAssumption(group: InvestmentGroup, overrides: ReadonlyMap<string, ForecastGroupAssumption>) {
+  return overrides.get(group.key) ?? (group.forecastClass ? legacyAssumptions[group.forecastClass] : undefined)
+}
 
-  const annualReturn = FORECAST_ASSUMPTIONS.assets.reduce(
-    (sum, asset) => sum + weights[asset.key] * asset.annualReturn,
-    0,
-  )
-  // This deliberately gives no credit for diversification. It is a transparent,
-  // conservative risk band without inventing a precise long-run correlation matrix.
-  const annualVolatility = FORECAST_ASSUMPTIONS.assets.reduce(
-    (sum, asset) => sum + weights[asset.key] * asset.annualVolatility,
-    0,
-  )
+export const FORECAST_MIN_RETURN_PERCENT = -99
+export const FORECAST_MAX_ASSUMPTION_PERCENT = 100
 
-  return { annualReturn, annualVolatility, weights, assumptionId: FORECAST_ASSUMPTIONS.id }
+export function buildForecastModel(
+  plan: InvestmentPlan, overrides: ReadonlyMap<string, ForecastGroupAssumption> = new Map(),
+): ForecastModel | null {
+  const groups = getInvestmentGroups(plan).filter(group => group.targetPercentage > 0)
+  const total = groups.reduce((sum, group) => sum + group.targetPercentage, 0)
+  if (total === 0) return null
+
+  const weights = Object.fromEntries(groups.map(group => [group.key, group.targetPercentage / total]))
+  let annualReturn = 0
+  let annualVolatility = 0
+  for (const group of groups) {
+    const assumption = forecastGroupAssumption(group, overrides)
+    if (!assumption) return null
+    annualReturn += weights[group.key] * assumption.annualReturn
+    // The model gives no diversification credit because group correlations are unknown.
+    annualVolatility += weights[group.key] * assumption.annualVolatility
+  }
+  return { annualReturn, annualVolatility, weights }
 }
 
 function mulberry32(seed: number) {

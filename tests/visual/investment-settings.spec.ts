@@ -23,6 +23,7 @@ test('portfolio groups can be added, assigned, and removed from Settings', async
   })
   await page.goto('/settings', { waitUntil: 'domcontentloaded' })
   await page.getByRole('tab', { name: 'Investment plan' }).click()
+  await expect(page.getByRole('region', { name: 'Investment groups' }).getByRole('combobox')).toHaveCount(0)
   await expect(page.getByText(/50% and the group holds 55%/)).toBeVisible()
   await expect(page.getByRole('slider', { name: /Off-target alert/ })).toHaveAttribute('aria-valuetext', '10 percentage points')
   await page.getByRole('button', { name: 'Locked', exact: true }).click()
@@ -93,6 +94,34 @@ test('a new account starts with no groups and builds a plan from nothing', async
   await page.getByRole('button', { name: 'Save investment plan' }).click()
   await expect.poll(() => overview.plan).toMatchObject({ groupingEnabled: true, targetsEnabled: true })
   expect(overview.plan.groups?.map(group => group.targetPercentage)).toEqual([50, 50])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
+})
+
+test('the investment forecast accepts assumptions for a custom group', async ({ page }) => {
+  const allocation: InvestmentAllocationOverview = {
+    status: 'OnTrack', appCurrency: 'MYR',
+    plan: {
+      groups: [{ key: 'property', label: 'Property', targetPercentage: 100, forecastClass: null }],
+      groupingEnabled: true, targetsEnabled: true, watchDrift: 3, alertDrift: 5,
+    },
+    assignments: [], recommendations: [], incompleteReasons: [],
+    sleeves: [{ sleeve: 'property', label: 'Property', status: 'OnTrack', value: 10000, targetPercentage: 100, currentPercentage: 100 }],
+    freshness: { isStale: false, hasMissingData: false, maxAgeMinutes: 60, staleInputs: [] },
+  }
+  await establishSession(page)
+  await mockApi(page, { investmentPortfolio: {
+    summary: { growthLedgerBalance: 0, totalValue: 10000 }, allocation,
+    accounts: [{ id: 'broker', name: 'Broker', baseCurrency: 'MYR', isArchived: false }],
+  } })
+  await page.goto('/investments', { waitUntil: 'domcontentloaded' })
+  await page.getByRole('button', { name: /Investment forecast/ }).click()
+  await page.getByRole('button', { name: 'Apply assumptions' }).click()
+  await expect(page.getByRole('dialog', { name: 'Investment forecast' }).getByRole('alert')).toContainText('Property needs an annual return')
+  await page.getByRole('spinbutton', { name: 'Property annual return (%)' }).fill('6')
+  await page.getByRole('spinbutton', { name: 'Property annual volatility (%)' }).fill('12')
+  await page.getByRole('button', { name: 'Apply assumptions' }).click()
+  await expect(page.getByRole('table', { name: 'Investment forecast data' })).toBeAttached({ timeout: 15000 })
+  await expect(page.getByRole('slider', { name: /Years ahead/ })).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(page.viewportSize()!.width)
 })
 

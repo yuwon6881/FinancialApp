@@ -43,7 +43,8 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     hideSensitive,
   } = useAppContext()
   const investmentOps = useMemo(
-    () => operations.filter(operation => operation.entity.startsWith('investment')),
+    () => operations.filter(operation => operation.entity.startsWith('investment'))
+      .sort((left, right) => left.createdAt - right.createdAt),
     [operations],
   )
   const isActive = (targetId: string) => activeSyncIds.includes(targetId) || activeSyncId === targetId
@@ -56,54 +57,34 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
   const orderSyncing = isActive('classification')
   const orderPending = Boolean(orderOperation && !orderOperation.isCompleted && !orderSyncing)
   const cachedOverview = () => providedOverview ?? api.readCachedInvestmentAllocation()
-  const projectQueuedPlan = (value: InvestmentPlan) => {
-    const queuedPlan = [...investmentOps].reverse().find(operation =>
-      operation.entity === 'investmentPlan' && operation.type === 'update')
-    if (!queuedPlan?.payload) return value
-    // Undo bookkeeping travels with the payload but is not part of the plan itself.
-    const plan = Object.fromEntries(Object.entries(queuedPlan.payload)
-      .filter(([key]) => key !== 'restoreAssignments' && key !== 'undoSnapshot'))
-    return { ...value, ...plan } as InvestmentPlan
-  }
-  /** A queued plan save releases investments from removed groups, and an undo of one puts them back. */
-  const projectPlanAssignments = (plan: InvestmentPlan, assignments: InvestmentAllocationOverview['assignments']) => {
-    const queuedPlan = [...investmentOps].reverse().find(operation =>
-      operation.entity === 'investmentPlan' && operation.type === 'update')
-    if (!queuedPlan?.payload) return assignments
-    const keys = new Set(getInvestmentGroups(plan).map(group => group.key))
-    const restored = new Map((Array.isArray(queuedPlan.payload.restoreAssignments) ? queuedPlan.payload.restoreAssignments : [])
-      .flatMap((item: { instrumentId?: unknown; sleeve?: unknown }) =>
-        typeof item?.instrumentId === 'string' && typeof item.sleeve === 'string' && keys.has(item.sleeve)
-          ? [[item.instrumentId, item.sleeve as InvestmentAllocationSleeve] as const] : []))
-    return assignments.map(item => restored.has(item.instrumentId)
-      ? { ...item, sleeve: restored.get(item.instrumentId) }
-      : item.sleeve && !keys.has(item.sleeve) ? { ...item, sleeve: undefined } : item)
-  }
   const projectQueuedChanges = (value: InvestmentAllocationOverview | null) => {
     if (!value) return null
-    const queuedAssignments = new Map(investmentOps
-      .filter(operation => operation.entity === 'investmentAllocation' && operation.type === 'update')
-      .map(operation => [operation.targetId,
-        typeof operation.payload?.sleeve === 'string'
-          ? operation.payload.sleeve as InvestmentAllocationSleeve
-          : undefined]))
-    const queuedOrder = [...investmentOps].reverse().find(operation =>
-      operation.entity === 'investmentAllocationOrder' && operation.type === 'update')
-    const queuedIds = Array.isArray(queuedOrder?.payload?.instrumentIds)
-      ? queuedOrder.payload.instrumentIds.filter((id): id is string => typeof id === 'string')
-      : []
-    const positions = new Map(queuedIds.map((id, index) => [id, index]))
-    const plan = projectQueuedPlan(value.plan)
-    return {
-      ...value,
-      plan,
-      assignments: projectPlanAssignments(plan, value.assignments).map(assignment => queuedAssignments.has(assignment.instrumentId)
-        ? { ...assignment, sleeve: queuedAssignments.get(assignment.instrumentId) }
-        : assignment)
-        .sort((left, right) =>
-          (positions.get(left.instrumentId) ?? left.order)
-          - (positions.get(right.instrumentId) ?? right.order)),
+    let { plan, assignments } = value
+    for (const operation of investmentOps) {
+      if (operation.type !== 'update' || !operation.payload) continue
+      if (operation.entity === 'investmentPlan') {
+        const { restoreAssignments, ...changes } = operation.payload
+        delete changes.undoSnapshot
+        plan = { ...plan, ...changes } as InvestmentPlan
+        const keys = new Set(getInvestmentGroups(plan).map(group => group.key))
+        const restored = new Map((Array.isArray(restoreAssignments) ? restoreAssignments : [])
+          .flatMap((item: { instrumentId?: unknown; sleeve?: unknown }) =>
+            typeof item?.instrumentId === 'string' && typeof item.sleeve === 'string' && keys.has(item.sleeve)
+              ? [[item.instrumentId, item.sleeve as InvestmentAllocationSleeve] as const] : []))
+        assignments = assignments.map(item => restored.has(item.instrumentId)
+          ? { ...item, sleeve: restored.get(item.instrumentId) }
+          : item.sleeve && !keys.has(item.sleeve) ? { ...item, sleeve: undefined } : item)
+      } else if (operation.entity === 'investmentAllocation') {
+        const sleeve = operation.payload.sleeve as InvestmentAllocationSleeve | null | undefined
+        if (sleeve != null && (!groupingEnabled(plan) || !getInvestmentGroups(plan).some(group => group.key === sleeve))) continue
+        assignments = assignments.map(item => item.instrumentId === operation.targetId ? { ...item, sleeve: sleeve ?? undefined } : item)
+      } else if (operation.entity === 'investmentAllocationOrder' && Array.isArray(operation.payload.instrumentIds)) {
+        const positions = new Map(operation.payload.instrumentIds.map((id: string, index: number) => [id, index]))
+        assignments = assignments.map(item => ({ ...item, order: positions.get(item.instrumentId) ?? item.order }))
+          .sort((left, right) => left.order - right.order)
+      }
     }
+    return { ...value, plan, assignments }
   }
   const initialOverview = () => projectQueuedChanges(cachedOverview())
   const [overview, setOverview] = useState<InvestmentAllocationOverview | null>(initialOverview)
@@ -156,27 +137,7 @@ export function InvestmentPlanSection({ initialOverview: providedOverview }: Inv
     if (!providedOverview) void load().catch(() => undefined)
   }, [isOffline, providedOverview])
   useEffect(() => {
-    const queuedPlan = [...investmentOps].reverse().find(value =>
-      value.entity === 'investmentPlan' && value.type === 'update')
-    const queuedAssignments = new Map(investmentOps
-      .filter(value => value.entity === 'investmentAllocation' && value.type === 'update')
-      .map(value => [value.targetId,
-        typeof value.payload?.sleeve === 'string'
-          ? value.payload.sleeve as InvestmentAllocationSleeve
-          : undefined]))
-    if (queuedPlan?.payload || queuedAssignments.size > 0) {
-      setOverview(previous => {
-        if (!previous) return previous
-        const plan = projectQueuedPlan(previous.plan)
-        return {
-          ...previous,
-          plan,
-          assignments: projectPlanAssignments(plan, previous.assignments).map(value => queuedAssignments.has(value.instrumentId)
-            ? { ...value, sleeve: queuedAssignments.get(value.instrumentId) }
-            : value),
-        }
-      })
-    }
+    if (investmentOps.length > 0) setOverview(projectQueuedChangesRef.current)
   }, [investmentOps])
   useEffect(() => {
     const synced = (event: Event) => {

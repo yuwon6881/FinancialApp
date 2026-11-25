@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { InvestmentPortfolio } from '../../../types'
 import { formatCurrencyVal } from '../../../lib/utils'
 import { getInvestmentGroups, hasActiveTargets } from '../../../lib/investmentGroups'
+import { buildForecastModel, type ForecastGroupAssumption } from '../../../lib/investmentForecast'
+import { ForecastGroupAssumptions } from './ForecastGroupAssumptions'
 import { BottomSheet } from '../../ui/BottomSheet'
 import { LineChart } from 'lucide-react'
 import { ForecastControls } from './ForecastControls'
@@ -24,11 +26,10 @@ interface InvestmentForecastPanelProps {
 
 export function InvestmentForecastPanel(props: InvestmentForecastPanelProps) {
   const plan = props.portfolio.allocation.plan
-  if (!hasActiveTargets(plan) || getInvestmentGroups(plan).some(group => !group.forecastClass)) {
+  if (!hasActiveTargets(plan)) {
     return (
       <InvestmentToolRow icon={<LineChart className="size-4" />} title="Investment forecast" titleId="forecast-title"
-        subtitle={hasActiveTargets(plan) ? 'Choose a forecast assumption for each group under Settings → Investment plan.'
-          : 'Set portfolio targets for your investment groups to use this forecast.'} />
+        subtitle="Set portfolio targets for your investment groups to use this forecast." />
     )
   }
   return <AvailableInvestmentForecast {...props} />
@@ -40,8 +41,11 @@ function AvailableInvestmentForecast({ portfolio, masked }: InvestmentForecastPa
   const [isOpen, setIsOpen] = useState(false)
   // The 10,000-path model is only worth building once the panel is close to view.
   const [nearViewport, setNearViewport] = useState(false)
-  const view = useInvestmentForecastView(portfolio, nearViewport)
-  const { forecast, model } = view
+  const [overrides, setOverrides] = useState<ReadonlyMap<string, ForecastGroupAssumption>>(() => new Map())
+  const plan = portfolio.allocation.plan
+  const model = useMemo(() => buildForecastModel(plan, overrides), [plan, overrides])
+  const view = useInvestmentForecastView(portfolio, model, nearViewport || isOpen)
+  const { forecast } = view
 
   useEffect(() => {
     const element = triggerRef.current
@@ -74,6 +78,11 @@ function AvailableInvestmentForecast({ portfolio, masked }: InvestmentForecastPa
     )
   }
 
+  if (!model && masked) {
+    return <InvestmentToolRow icon={<LineChart className="size-4" />} title="Investment forecast"
+      titleId="forecast-title" subtitle="Unhide balances to enter forecast assumptions." />
+  }
+
   return (
     <>
       <InvestmentToolRow
@@ -81,7 +90,7 @@ function AvailableInvestmentForecast({ portfolio, masked }: InvestmentForecastPa
         icon={<LineChart className="size-4" />}
         title="Investment forecast"
         titleId="forecast-title"
-        subtitle="Where today’s portfolio and a monthly amount could go"
+        subtitle={model ? 'Where today’s portfolio and a monthly amount could go' : 'Enter assumptions for your investment groups'}
         onClick={() => setIsOpen(true)}
         expanded={isOpen}
       />
@@ -94,69 +103,79 @@ function AvailableInvestmentForecast({ portfolio, masked }: InvestmentForecastPa
         initialFocusRef={initialFocusRef}
       >
         <div ref={initialFocusRef} tabIndex={-1} className="min-w-0 outline-none">
-          <ForecastSummary
-            years={view.years}
-            ending={view.displayedEnding}
-            lower={view.displayedLower}
-            upper={view.displayedUpper}
-            startValue={view.startValue}
-            futureContributions={view.displayedFutureContributions}
-            growth={view.displayedGrowth}
-            todayMoney={view.todayMoney}
-            money={calculatedMoney}
-          />
-
-          <div className="mt-5">
-            <ForecastControls
+          {!masked && (
+            <details className="mb-3 rounded-control inset-group p-3" open={!model || undefined}>
+              <summary className="cursor-pointer text-label font-medium text-foreground">Forecast assumptions</summary>
+              <ForecastGroupAssumptions groups={getInvestmentGroups(plan)} overrides={overrides} onApply={setOverrides} />
+            </details>
+          )}
+          {model && <>
+            <ForecastSummary
               years={view.years}
-              onYearsChange={view.setYears}
-              monthlyContribution={view.monthlyContribution}
-              onMonthlyContributionChange={view.setMonthlyContribution}
-              contributionMax={view.contributionMax}
-              contributionStep={view.contributionStep}
+              ending={view.displayedEnding}
+              lower={view.displayedLower}
+              upper={view.displayedUpper}
+              startValue={view.startValue}
+              futureContributions={view.displayedFutureContributions}
+              growth={view.displayedGrowth}
               todayMoney={view.todayMoney}
-              onTodayMoneyChange={view.setTodayMoney}
-              inflationPercent={view.inflationPercent}
-              onInflationPercentChange={view.setInflationPercent}
+              money={calculatedMoney}
+            />
+
+            <div className="mt-5">
+              <ForecastControls
+                years={view.years}
+                onYearsChange={view.setYears}
+                monthlyContribution={view.monthlyContribution}
+                onMonthlyContributionChange={view.setMonthlyContribution}
+                contributionMax={view.contributionMax}
+                contributionStep={view.contributionStep}
+                todayMoney={view.todayMoney}
+                onTodayMoneyChange={view.setTodayMoney}
+                inflationPercent={view.inflationPercent}
+                onInflationPercentChange={view.setInflationPercent}
+                masked={masked}
+                money={money}
+              />
+            </div>
+
+            {forecast.error ? (
+              <p role="alert" className="mt-5 rounded-control bg-destructive/8 p-3 text-caption text-destructive">{forecast.error}</p>
+            ) : view.displayedPoints.length > 0 ? (
+              <InvestmentForecastChart points={view.displayedPoints} target={view.displayedTarget} currency={portfolio.appCurrency} masked={masked} />
+            ) : (
+              <div role="status" className="mt-5 flex h-48 items-center justify-center text-caption text-muted-foreground">Preparing possible paths…</div>
+            )}
+
+            <ForecastTargetSection
+              target={view.displayedTarget}
+              onAdd={view.addTarget}
+              onRemove={view.removeTarget}
+              onChange={view.setDisplayedTarget}
+              targetMax={view.targetMax}
+              targetStep={view.targetStep}
+              years={view.years}
+              targetChance={forecast.result?.targetChance}
+              requiredContribution={forecast.result ? view.requiredContribution : undefined}
+              maxMonthlyContribution={view.contributionMax}
+              onUseRequiredAmount={view.tryRequiredAmount}
+              isCalculating={!forecast.result}
               masked={masked}
               money={money}
             />
-          </div>
 
-          {forecast.error ? (
-            <p role="alert" className="mt-5 rounded-control bg-destructive/8 p-3 text-caption text-destructive">{forecast.error}</p>
-          ) : view.displayedPoints.length > 0 ? (
-            <InvestmentForecastChart points={view.displayedPoints} target={view.displayedTarget} currency={portfolio.appCurrency} masked={masked} />
-          ) : (
-            <div role="status" className="mt-5 flex h-48 items-center justify-center text-caption text-muted-foreground">Preparing possible paths…</div>
-          )}
-
-          <ForecastTargetSection
-            target={view.displayedTarget}
-            onAdd={view.addTarget}
-            onRemove={view.removeTarget}
-            onChange={view.setDisplayedTarget}
-            targetMax={view.targetMax}
-            targetStep={view.targetStep}
-            years={view.years}
-            targetChance={forecast.result?.targetChance}
-            requiredContribution={forecast.result ? view.requiredContribution : undefined}
-            maxMonthlyContribution={view.contributionMax}
-            onUseRequiredAmount={view.tryRequiredAmount}
-            isCalculating={!forecast.result}
-            masked={masked}
-            money={money}
-          />
-
-          <details className="mt-3 rounded-control inset-group p-3">
-            <summary className="cursor-pointer text-label font-medium text-foreground">How this forecast was worked out</summary>
-            <div className="mt-3 space-y-2 text-caption leading-relaxed text-muted-foreground">
-              <p>It tests 10,000 outcomes using your plan. The model uses {percentage(model.annualReturn)} average annual growth and about {percentage(model.annualVolatility)} annual variation. Past returns are context, not a promise.</p>
-              <p>Growth and variation come from a published long-term capital-markets model, not your history. It follows today’s portfolio and plan, adding deposits at month-end.</p>
-              <p>Results are hypothetical, not guaranteed, and exclude future tax, expenses, and exchange-rate changes.</p>
-              {forecast.initializationMs !== null && <p className="sr-only">The forecast paths were prepared in {Math.round(forecast.initializationMs)} milliseconds.</p>}
-            </div>
-          </details>
+            <details className="mt-3 rounded-control inset-group p-3">
+              <summary className="cursor-pointer text-label font-medium text-foreground">How this forecast was worked out</summary>
+              <div className="mt-3 space-y-2 text-caption leading-relaxed text-muted-foreground">
+                <p>It tests 10,000 outcomes using your plan.{!masked && (
+                  <> The model uses {percentage(model.annualReturn)} average annual growth and about {percentage(model.annualVolatility)} annual variation.</>
+                )}</p>
+                <p>The model weights each group’s assumptions by your portfolio targets and adds deposits at month-end.</p>
+                <p>Results are hypothetical, not guaranteed, and exclude future tax, expenses, and exchange-rate changes.</p>
+                {forecast.initializationMs !== null && <p className="sr-only">The forecast paths were prepared in {Math.round(forecast.initializationMs)} milliseconds.</p>}
+              </div>
+            </details>
+          </>}
         </div>
       </BottomSheet>
     </>
