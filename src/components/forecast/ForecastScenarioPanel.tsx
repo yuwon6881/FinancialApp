@@ -14,7 +14,7 @@ import { Button } from '../ui/Button'
 import { CustomSelect } from '../ui/CustomSelect'
 import { FormField } from '../ui/FormField'
 import { IconButton } from '../ui/IconButton'
-import { Input } from '../ui/Input'
+import { SmartAmountInput } from '../ui/SmartAmountInput'
 import { AmountText } from '../ui/AmountText'
 import { Panel } from '../ui/Panel'
 import { ForecastWhatIfSheet } from './ForecastWhatIfSheet'
@@ -31,18 +31,27 @@ function ScenarioAmount({ label, hint, value, onChange }: {
   onChange: (value: number | null) => void
 }) {
   const [text, setText] = useState(value === null ? '' : String(value))
+  const [focused, setFocused] = useState(false)
   const parsed = parseOptionalAmount(text)
-  const error = text.trim() && parsed === null ? 'Enter an amount from 0 to 100,000,000.' : undefined
+  const isPendingExpression = focused && /[+\-×÷*/(]\s*$/.test(text.trim())
+  const error = !isPendingExpression && text.trim() && parsed === null
+    ? 'Enter an amount from 0 to 100,000,000.'
+    : undefined
 
   return (
     <FormField label={label} hint={hint} error={error}>
-      <Input inputMode="decimal" value={text} placeholder="Optional"
+      <SmartAmountInput
+        value={text}
+        placeholder="Optional"
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
         onChange={event => {
           const next = event.target.value
           setText(next)
           const amount = parseOptionalAmount(next)
           if (amount !== null || !next.trim()) onChange(amount)
-        }} />
+        }}
+      />
     </FormField>
   )
 }
@@ -98,7 +107,7 @@ export function ForecastScenarioPanel({
                 <span className="mr-auto min-w-0 flex-[1_1_8rem]">
                   <span className="block wrap-anywhere text-body text-foreground">{row.label}</span>
                   <span className="block text-caption text-muted-foreground">
-                    {formatForecastDate(row.date)} · {row.detail}{outsideForecast && ' · Outside forecast dates'}
+                    {formatForecastDate(row.date)} · {row.detail}{row.isAdjustment && ' · Adjustment'}{outsideForecast && ' · Outside forecast dates'}
                   </span>
                 </span>
                 <AmountText value={row.amount} currency={currency} signDisplay={row.isMove ? 'auto' : 'always'}

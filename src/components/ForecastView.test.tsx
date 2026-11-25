@@ -62,16 +62,27 @@ describe('ForecastView', () => {
       .toContain('total Essentials spending for one budgeting cycle, excluding bills and loan instalments')
     expect(await screen.findByText('What’s included')).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Dec 2026' })).toBeTruthy()
-    expect(screen.getByText('No bucket runs short in this forecast.')).toBeTruthy()
+    expect(screen.queryByText(/runs short/)).toBeNull()
   })
 
-  it('sends a what-if item to the forecast without saving it anywhere else', async () => {
+  it('supports calculator expressions in scenario and what-if amount inputs', async () => {
     renderView()
     await screen.findByRole('heading', { name: 'Dec 2026' })
 
+    const incomeInput = screen.getByLabelText('Income per cycle') as HTMLInputElement
+    fireEvent.change(incomeInput, { target: { value: '4000+800' } })
+    expect(screen.getByText('4800.00')).toBeTruthy()
+    fireEvent.keyDown(incomeInput, { key: '=' })
+    expect(incomeInput.value).toBe('4800.00')
+    await waitFor(() => expect(lastScenario().incomePerCycle).toBe(4800))
+
     fireEvent.click(screen.getByRole('button', { name: /Add what-if/ }))
     fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Tooth crown' } })
-    fireEvent.change(screen.getByLabelText('Amount (MYR)'), { target: { value: '1800' } })
+    const amountInput = screen.getByLabelText('Amount (MYR)') as HTMLInputElement
+    fireEvent.change(amountInput, { target: { value: '900*2' } })
+    expect(screen.getByText('1800.00')).toBeTruthy()
+    fireEvent.blur(amountInput)
+    expect(amountInput.value).toBe('1800.00')
     fireEvent.click(screen.getByRole('button', { name: 'Add to forecast' }))
 
     await waitFor(() => expect(lastScenario().items).toHaveLength(1))
@@ -79,21 +90,40 @@ describe('ForecastView', () => {
     expect(screen.getByRole('button', { name: /Reset what-ifs/ })).toHaveProperty('disabled', false)
   })
 
-  it('moves money between buckets inside one cycle from its card', async () => {
+  it('swaps categories in adjust and resets adjustments separately from what-ifs', async () => {
     renderView()
     await screen.findByRole('heading', { name: 'Dec 2026' })
 
+    fireEvent.click(screen.getByRole('button', { name: /Add what-if/ }))
+    fireEvent.change(await screen.findByLabelText('Name'), { target: { value: 'Tooth crown' } })
+    fireEvent.change(screen.getByLabelText('Amount (MYR)'), { target: { value: '1800' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add to forecast' }))
+    await waitFor(() => expect(lastScenario().items).toHaveLength(1))
+
     fireEvent.click(screen.getByRole('button', { name: 'Adjust Dec 2026' }))
     expect(await screen.findByRole('dialog', { name: 'Adjust Dec 2026' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Swap Direction/i }))
     fireEvent.change(screen.getByLabelText('Amount (MYR)'), { target: { value: '1000' } })
     fireEvent.click(screen.getByRole('button', { name: 'Add to forecast' }))
 
-    await waitFor(() => expect(lastScenario().items).toHaveLength(2))
-    expect(lastScenario().items).toEqual([
-      expect.objectContaining({ label: 'Move Rewards to Essentials', amount: -1000, bucket: 'Rewards' }),
-      expect.objectContaining({ label: 'Move Rewards to Essentials', amount: 1000, bucket: 'Essentials' }),
+    await waitFor(() => expect(lastScenario().items).toHaveLength(3))
+    expect(lastScenario().items.slice(1)).toEqual([
+      expect.objectContaining({ label: 'Move Essentials to Rewards', amount: -1000, bucket: 'Essentials', origin: 'adjust' }),
+      expect.objectContaining({ label: 'Move Essentials to Rewards', amount: 1000, bucket: 'Rewards', origin: 'adjust' }),
     ])
-    expect(screen.getByText(/Rewards → Essentials/)).toBeTruthy()
+    expect(screen.getByText(/Essentials → Rewards/)).toBeTruthy()
+
+    // Resetting what-ifs keeps cycle adjustments intact.
+    fireEvent.click(screen.getByRole('button', { name: /Reset what-ifs/ }))
+    await waitFor(() => expect(lastScenario().items).toHaveLength(2))
+    expect(screen.queryByText('Tooth crown')).toBeNull()
+    expect(screen.getByText(/Essentials → Rewards/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Reset what-ifs/ })).toBeNull()
+
+    // Reset adjustments clears the remaining cycle adjustment.
+    fireEvent.click(screen.getByRole('button', { name: /Reset adjustments/ }))
+    await waitFor(() => expect(lastScenario().items).toHaveLength(0))
+    expect(screen.queryByText(/Essentials → Rewards/)).toBeNull()
   })
 
   it('updates a bill toggle in the activity dialog while the server response is pending', async () => {
@@ -122,14 +152,15 @@ describe('ForecastView', () => {
     }
   })
 
-  it('flags a bucket that runs short', async () => {
+  it('marks a shortfall on the cycle card without summary prose', async () => {
     fetchCashFlowForecast.mockResolvedValue(response({
       forecast: { cycles: [cycle({ closing: buckets(-800), shortBuckets: ['Essentials'] })], incomeKnown: true, everydaySpendingIncluded: false, stabilityTargetReachedOn: null },
     }))
     renderView()
 
     expect(await screen.findByText('Shortfall')).toBeTruthy()
-    expect(screen.getByRole('list', { name: 'Shortfalls' }).textContent).toContain('Essentials runs short in Dec 2026')
+    expect(screen.queryByText(/runs short/)).toBeNull()
+    expect(screen.queryByRole('list', { name: 'Shortfalls' })).toBeNull()
   })
 
   it('hides amounts and scenario inputs in sensitive mode', async () => {

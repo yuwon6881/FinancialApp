@@ -1,6 +1,8 @@
 export const FORECAST_BUCKETS = ['Essentials', 'Growth', 'Stability', 'Rewards'] as const
 export type ForecastBucket = (typeof FORECAST_BUCKETS)[number]
 
+export type ForecastScenarioItemOrigin = 'what-if' | 'adjust'
+
 /** A temporary what-if line. `bucket: null` is extra income, split like a salary. */
 export interface ForecastScenarioItem {
   id: string
@@ -10,6 +12,8 @@ export interface ForecastScenarioItem {
   label: string
   /** Shared by the two halves of a move between buckets; client-only, never sent to the server. */
   transferId?: string
+  /** Distinguishes cycle-card adjustments from Scenario what-ifs; client-only, never sent to the server. */
+  origin?: ForecastScenarioItemOrigin
 }
 
 /** Everything the Forecast workspace lets the user change. Never sent to the outbox. */

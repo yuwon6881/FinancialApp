@@ -6,6 +6,8 @@ import {
   addScenarioItems,
   loadScenarioDraft,
   removeScenarioItem,
+  resetScenarioAdjustments,
+  resetWhatIfs,
   saveScenarioDraft,
   toggleSkippedBill,
 } from '../../../lib/forecastScenario'
@@ -65,10 +67,12 @@ export function useForecastView(account: string, currency: string) {
     setCycles: (cycles: number) => update('cycles', cycles),
     setIncome: (incomePerCycle: number | null) => update('incomePerCycle', incomePerCycle),
     setEverydaySpending: (everydaySpendingPerCycle: number | null) => update('everydaySpendingPerCycle', everydaySpendingPerCycle),
-    addItems: (items: ForecastScenarioItem[]) => changeScenario(previous => addScenarioItems(previous, items)),
+    addItems: (items: ForecastScenarioItem[]) => changeScenario(previous => addScenarioItems(previous, items, 'what-if')),
+    addAdjustments: (items: ForecastScenarioItem[]) => changeScenario(previous => addScenarioItems(previous, items, 'adjust')),
     removeItem: (id: string) => changeScenario(previous => removeScenarioItem(previous, id)),
     toggleBill: (billKey: string) => changeScenario(previous => toggleSkippedBill(previous, billKey)),
-    reset: () => changeScenario(previous => ({ ...previous, items: [], skippedBills: [] })),
+    reset: () => changeScenario(resetWhatIfs),
+    resetAdjustments: () => changeScenario(resetScenarioAdjustments),
     retry: () => {
       setDraft(draft => draft.debounce ? { ...draft, debounce: false } : draft)
       setReloadKey(key => key + 1)

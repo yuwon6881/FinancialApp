@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { ArrowLeftRight } from 'lucide-react'
 import type { ForecastBucket, ForecastScenarioItem } from '../../types'
 import { FORECAST_BUCKETS } from '../../types'
 import { buildScenarioChange, FORECAST_LABEL_MAX, type ScenarioChangeDraft, type ScenarioChangeKind } from '../../lib/forecastScenario'
@@ -9,6 +10,7 @@ import { DatePicker } from '../ui/DatePicker'
 import { FormField } from '../ui/FormField'
 import { Input } from '../ui/Input'
 import { ModalActions } from '../ui/ModalActions'
+import { SmartAmountInput } from '../ui/SmartAmountInput'
 
 const KIND_OPTIONS: { value: ScenarioChangeKind; label: string }[] = [
   { value: 'move', label: 'Move money between categories' },
@@ -77,15 +79,30 @@ export function ForecastWhatIfSheet({ range, initialKind = 'spend', currency, on
               : { kind })} />
         </FormField>
         {isMove ? (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <FormField label="From">
-              <CustomSelect value={draft.bucket} options={BUCKET_OPTIONS} className="w-full" ariaLabel="Move from"
-                onChange={(bucket: ForecastBucket) => update({ bucket })} />
-            </FormField>
-            <FormField label="To">
-              <CustomSelect value={draft.toBucket} options={BUCKET_OPTIONS} className="w-full" ariaLabel="Move to"
-                onChange={(toBucket: ForecastBucket) => update({ toBucket })} />
-            </FormField>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-label font-medium text-muted-foreground">Transfer route</span>
+              <Button
+                variant="secondary"
+                size="sm"
+                type="button"
+                onClick={() => update({ bucket: draft.toBucket, toBucket: draft.bucket })}
+                title="Swap source and destination categories"
+              >
+                <ArrowLeftRight className="size-3.5" aria-hidden="true" />
+                Swap Direction
+              </Button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField label="From">
+                <CustomSelect value={draft.bucket} options={BUCKET_OPTIONS} className="w-full" ariaLabel="Move from"
+                  onChange={(bucket: ForecastBucket) => update({ bucket })} />
+              </FormField>
+              <FormField label="To">
+                <CustomSelect value={draft.toBucket} options={BUCKET_OPTIONS} className="w-full" ariaLabel="Move to"
+                  onChange={(toBucket: ForecastBucket) => update({ toBucket })} />
+              </FormField>
+            </div>
           </div>
         ) : draft.kind !== 'income' && (
           <FormField label="Category">
@@ -93,21 +110,21 @@ export function ForecastWhatIfSheet({ range, initialKind = 'spend', currency, on
               onChange={(bucket: ForecastBucket) => update({ bucket })} />
           </FormField>
         )}
+        <FormField label={`Amount (${currency})`}>
+          <SmartAmountInput value={draft.amount} placeholder="0.00"
+            onChange={event => update({ amount: event.target.value })} />
+        </FormField>
         <div className="grid gap-3 sm:grid-cols-2">
-          <FormField label={`Amount (${currency})`}>
-            <Input inputMode="decimal" value={draft.amount} placeholder="0.00"
-              onChange={event => update({ amount: event.target.value })} />
+          <FormField label={isMove ? 'Name (optional)' : 'Name'}>
+            <Input value={draft.label} maxLength={FORECAST_LABEL_MAX}
+              placeholder={isMove ? `Move ${draft.bucket} to ${draft.toBucket}` : 'e.g. Car repair'}
+              onChange={event => update({ label: event.target.value })} />
           </FormField>
           <FormField label="Date">
             <DatePicker value={draft.date} min={range.min} max={range.max} className="w-full"
               onChange={date => update({ date })} />
           </FormField>
         </div>
-        <FormField label={isMove ? 'Name (optional)' : 'Name'}>
-          <Input value={draft.label} maxLength={FORECAST_LABEL_MAX}
-            placeholder={isMove ? `Move ${draft.bucket} to ${draft.toBucket}` : 'e.g. Car repair'}
-            onChange={event => update({ label: event.target.value })} />
-        </FormField>
         {error && <p role="alert" className="text-body text-destructive">{error}</p>}
       </form>
     </BottomSheet>

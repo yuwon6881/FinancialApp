@@ -82,7 +82,9 @@ test('Forecast opens from its own shortcut and keeps what-ifs out of the records
   await testInfo.attach('forecast', { body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png' })
   recording = true
 
-  await page.getByRole('textbox', { name: 'Income per cycle' }).fill('4800')
+  await page.getByRole('textbox', { name: 'Income per cycle' }).fill('4000+800')
+  await page.getByRole('textbox', { name: 'Income per cycle' }).press('Enter')
+  await expect(page.getByRole('textbox', { name: 'Income per cycle' })).toHaveValue('4800.00')
   await expect.poll(() => requests.at(-1)?.incomePerCycle).toBe(4800)
 
   await page.getByRole('button', { name: 'Add what-if' }).click()
@@ -110,6 +112,7 @@ test('Forecast opens from its own shortcut and keeps what-ifs out of the records
   const toggle = december.getByRole('button', { name: /Activity · 2/ })
   await expect(cards.first().getByText('Shortfall')).toHaveCount(1)
   await expect(december.getByText('Shortfall')).toHaveCount(0)
+  await expect(page.getByText(/runs short/)).toHaveCount(0)
   const cardSizes = () => cards.evaluateAll(elements => elements.map(({ clientWidth, clientHeight }) => [clientWidth, clientHeight]))
   const beforeActivity = await cardSizes()
   expect(beforeActivity[0]).toEqual(beforeActivity[1])
@@ -144,7 +147,13 @@ test('Forecast opens from its own shortcut and keeps what-ifs out of the records
   await december.getByRole('button', { name: 'Adjust Dec 2026' }).click()
   const adjust = page.getByRole('dialog', { name: 'Adjust Dec 2026' })
   await expect(adjust.getByRole('combobox', { name: 'Move from' })).toBeVisible()
-  await adjust.getByRole('textbox', { name: 'Amount (MYR)' }).fill('1000')
+  await adjust.getByRole('button', { name: 'Swap Direction' }).click()
+  await expect(adjust.getByRole('combobox', { name: 'Move from' })).toContainText('Essentials')
+  await expect(adjust.getByRole('combobox', { name: 'Move to' })).toContainText('Rewards')
+  await adjust.getByRole('button', { name: 'Swap Direction' }).click()
+  await adjust.getByRole('textbox', { name: 'Amount (MYR)' }).fill('500*2')
+  await adjust.getByRole('textbox', { name: 'Amount (MYR)' }).press('Enter')
+  await expect(adjust.getByRole('textbox', { name: 'Amount (MYR)' })).toHaveValue('1000.00')
   await testInfo.attach('cycle-adjust', { body: await page.screenshot({ animations: 'disabled' }), contentType: 'image/png' })
   await adjust.getByRole('button', { name: 'Add to forecast' }).click()
   await expect.poll(() => requests.at(-1)?.items.map(item => [item.bucket, item.amount])).toEqual([
@@ -153,6 +162,12 @@ test('Forecast opens from its own shortcut and keeps what-ifs out of the records
   await expect(page.getByRole('list', { name: 'What-if items' }).getByText(/Rewards → Essentials/)).toBeVisible()
 
   await page.getByRole('button', { name: 'Reset what-ifs' }).click()
+  await expect.poll(() => requests.at(-1)?.items.map(item => [item.bucket, item.amount])).toEqual([
+    ['Rewards', -1000], ['Essentials', 1000],
+  ])
+  await expect.poll(() => requests.at(-1)?.incomePerCycle).toBe(4800)
+
+  await page.getByRole('button', { name: 'Reset adjustments' }).click()
   await expect.poll(() => requests.at(-1)?.items.length).toBe(0)
   await expect.poll(() => requests.at(-1)?.incomePerCycle).toBe(4800)
 

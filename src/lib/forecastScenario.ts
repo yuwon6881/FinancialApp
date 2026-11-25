@@ -2,8 +2,9 @@
 // optional on-device draft, and is only ever sent to the read-only forecast endpoint. These pure
 // helpers are the whole editing model, so the view hook stays a thin coordinator.
 
-import type { ForecastBucket, ForecastScenario, ForecastScenarioItem } from '../types'
+import type { ForecastBucket, ForecastScenario, ForecastScenarioItem, ForecastScenarioItemOrigin } from '../types'
 import { FORECAST_BUCKETS } from '../types'
+import { evaluateMathString } from './math'
 
 export const FORECAST_MIN_CYCLES = 1
 export const FORECAST_MAX_CYCLES = 12
@@ -69,7 +70,8 @@ export interface ScenarioChangeDraft {
 
 const validateAmountAndDate = (date: string, raw: string): number | string => {
   if (!isDateOnly(date)) return 'Pick a date.'
-  if (Number(raw) > FORECAST_MAX_AMOUNT) return 'Enter an amount of 100,000,000 or less.'
+  const evaluated = parseArithmeticAmount(raw)
+  if (evaluated !== null && evaluated > FORECAST_MAX_AMOUNT) return 'Enter an amount of 100,000,000 or less.'
   return parseOptionalAmount(raw) || 'Enter an amount above zero.'
 }
 
@@ -112,9 +114,14 @@ export function addScenarioItem(scenario: ForecastScenario, item: ForecastScenar
 }
 
 /** Adds every line of one change or none of them, so a move never arrives half-applied. */
-export function addScenarioItems(scenario: ForecastScenario, items: readonly ForecastScenarioItem[]): ForecastScenario {
+export function addScenarioItems(
+  scenario: ForecastScenario,
+  items: readonly ForecastScenarioItem[],
+  origin: ForecastScenarioItemOrigin = 'what-if',
+): ForecastScenario {
   if (scenario.items.length + items.length > FORECAST_MAX_ITEMS) return scenario
-  return { ...scenario, items: [...scenario.items, ...items] }
+  const tagged = origin === 'adjust' ? items.map(item => ({ ...item, origin: 'adjust' as const })) : items
+  return { ...scenario, items: [...scenario.items, ...tagged] }
 }
 
 /** Removing either half of a move removes the whole move. */
@@ -131,6 +138,7 @@ export interface ScenarioChangeRow {
   amount: number
   detail: string
   isMove: boolean
+  isAdjustment?: boolean
 }
 
 /** One row per change for the scenario list: the two halves of a move read as one. */
@@ -138,6 +146,7 @@ export function scenarioChangeRows(items: readonly ForecastScenarioItem[]): Scen
   const rows: ScenarioChangeRow[] = []
   const seen = new Set<string>()
   for (const item of items) {
+    const adjustmentTag = item.origin === 'adjust' ? { isAdjustment: true } : {}
     if (item.transferId) {
       if (seen.has(item.transferId)) continue
       seen.add(item.transferId)
@@ -145,12 +154,15 @@ export function scenarioChangeRows(items: readonly ForecastScenarioItem[]): Scen
       const from = pair.find(other => other.amount < 0)
       const to = pair.find(other => other.amount > 0)
       if (from && to) {
-        rows.push({ id: item.id, label: item.label, date: item.date, amount: to.amount, detail: `${from.bucket} → ${to.bucket}`, isMove: true })
+        rows.push({
+          id: item.id, label: item.label, date: item.date, amount: to.amount,
+          detail: `${from.bucket} → ${to.bucket}`, isMove: true, ...adjustmentTag,
+        })
         continue
       }
     }
     rows.push({
-      id: item.id, label: item.label, date: item.date, amount: item.amount, isMove: false,
+      id: item.id, label: item.label, date: item.date, amount: item.amount, isMove: false, ...adjustmentTag,
       detail: item.bucket === null ? 'Extra income' : item.amount > 0 ? `Into ${item.bucket}` : item.bucket,
     })
   }
@@ -164,12 +176,18 @@ export function toggleSkippedBill(scenario: ForecastScenario, billKey: string): 
   return { ...scenario, skippedBills: skipped }
 }
 
+function parseArithmeticAmount(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed || !/^[0-9.()+\-*/×÷−\s]+$/.test(trimmed)) return null
+  const amount = evaluateMathString(trimmed)
+  return amount !== null && Number.isFinite(amount) ? amount : null
+}
+
 /** Blank means "not included", never zero: the forecast reports the figure as unknown. */
 export function parseOptionalAmount(value: string): number | null {
-  if (value.trim() === '') return null
-  const amount = Number(value)
-  return Number.isFinite(amount) && amount >= 0 && amount <= FORECAST_MAX_AMOUNT
-    ? Math.round(amount * 100) / 100
+  const amount = parseArithmeticAmount(value)
+  return amount !== null && amount >= 0 && amount <= FORECAST_MAX_AMOUNT
+    ? amount
     : null
 }
 
@@ -178,8 +196,31 @@ export function clampCycles(value: number): number {
   return Math.min(FORECAST_MAX_CYCLES, Math.max(FORECAST_MIN_CYCLES, Math.round(value)))
 }
 
+export function hasWhatIfChanges(scenario: ForecastScenario): boolean {
+  return scenario.items.some(item => item.origin !== 'adjust') || scenario.skippedBills.length > 0
+}
+
+export function hasScenarioAdjustments(scenario: ForecastScenario): boolean {
+  return scenario.items.some(item => item.origin === 'adjust')
+}
+
 export function isScenarioChanged(scenario: ForecastScenario): boolean {
-  return scenario.items.length > 0 || scenario.skippedBills.length > 0
+  return hasWhatIfChanges(scenario) || hasScenarioAdjustments(scenario)
+}
+
+export function resetWhatIfs(scenario: ForecastScenario): ForecastScenario {
+  return {
+    ...scenario,
+    items: scenario.items.filter(item => item.origin === 'adjust'),
+    skippedBills: [],
+  }
+}
+
+export function resetScenarioAdjustments(scenario: ForecastScenario): ForecastScenario {
+  return {
+    ...scenario,
+    items: scenario.items.filter(item => item.origin !== 'adjust'),
+  }
 }
 
 function isScenarioItem(value: unknown): value is ForecastScenarioItem {
@@ -189,6 +230,7 @@ function isScenarioItem(value: unknown): value is ForecastScenarioItem {
     && typeof item.amount === 'number' && item.amount !== 0 && Math.abs(item.amount) <= FORECAST_MAX_AMOUNT
     && (item.bucket === null || FORECAST_BUCKETS.includes(item.bucket as ForecastBucket))
     && (item.transferId === undefined || (typeof item.transferId === 'string' && item.bucket !== null))
+    && (item.origin === undefined || item.origin === 'what-if' || item.origin === 'adjust')
 }
 
 /** A stored move missing one half would silently create or destroy money, so it is dropped whole. */

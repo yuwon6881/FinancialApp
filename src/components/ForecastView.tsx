@@ -1,9 +1,14 @@
 import { useState } from 'react'
-import { AlertTriangle, CheckCircle2, RotateCcw } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import type { ForecastCycle } from '../types'
-import { firstShortfalls } from '../lib/forecastSummary'
 import { useAppPrefs } from '../contexts/AppContext'
-import { FORECAST_MAX_ITEMS, formatForecastRange, isScenarioChanged, formatForecastDate } from '../lib/forecastScenario'
+import {
+  FORECAST_MAX_ITEMS,
+  formatForecastDate,
+  formatForecastRange,
+  hasScenarioAdjustments,
+  hasWhatIfChanges,
+} from '../lib/forecastScenario'
 import { financialDate } from '../lib/financialDate'
 import { useForecastView } from './forecast/view/useForecastView'
 import { ForecastScenarioPanel } from './forecast/ForecastScenarioPanel'
@@ -50,7 +55,7 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
         onEverydaySpendingChange={view.setEverydaySpending}
         onAddItems={view.addItems}
         onRemoveItem={view.removeItem}
-        resetAction={!masked && isScenarioChanged(scenario) && (
+        resetAction={!masked && hasWhatIfChanges(scenario) && (
           <Button type="button" variant="tertiary" size="sm" onClick={view.reset}>
             <RotateCcw className="size-4" aria-hidden="true" /> Reset what-ifs
           </Button>
@@ -67,14 +72,19 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
       )}
 
       <section aria-labelledby="forecast-balances-title" className="space-y-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <h2 id="forecast-balances-title" className="text-section text-foreground">End-of-cycle balances</h2>
-          <span role="status" className="text-caption text-muted-foreground">
-            {view.isLoading && forecast ? 'Updating…' : ''}
-          </span>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <span role="status" className="text-caption text-muted-foreground">
+              {view.isLoading && forecast ? 'Updating…' : ''}
+            </span>
+            {!masked && hasScenarioAdjustments(scenario) && (
+              <Button type="button" variant="tertiary" size="sm" onClick={view.resetAdjustments}>
+                <RotateCcw className="size-4" aria-hidden="true" /> Reset adjustments
+              </Button>
+            )}
+          </div>
         </div>
-
-        {projection && !masked && <ForecastVerdict cycles={projection.cycles} currency={currency} />}
 
         <div aria-busy={view.isLoading}>
           {forecast && projection
@@ -112,34 +122,8 @@ function ForecastWorkspace({ account, currency, masked }: { account: string; cur
             max: adjusting.end,
           }}
           onClose={() => setAdjusting(null)}
-          onAddItems={items => { view.addItems(items); setAdjusting(null) }} />
+          onAddItems={items => { view.addAdjustments(items); setAdjusting(null) }} />
       )}
     </PageContainer>
-  )
-}
-
-/** Leads with the answer: where money first runs short, or that nothing does. */
-function ForecastVerdict({ cycles, currency }: { cycles: ForecastCycle[]; currency: string }) {
-  const shortfalls = firstShortfalls(cycles)
-  if (shortfalls.length === 0) {
-    return (
-      <p className="flex items-start gap-2 text-body text-muted-foreground">
-        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
-        No bucket runs short in this forecast.
-      </p>
-    )
-  }
-  return (
-    <ul aria-label="Shortfalls" className="space-y-1">
-      {shortfalls.map(shortfall => (
-        <li key={shortfall.bucket} className="flex items-start gap-2 text-body text-foreground">
-          <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden="true" />
-          <span className="min-w-0">
-            {shortfall.bucket} runs short in {shortfall.isCurrent ? 'the rest of this cycle' : shortfall.cycleLabel}, ending at{' '}
-            <AmountText value={shortfall.closing} currency={currency} className="font-semibold text-destructive" />
-          </span>
-        </li>
-      ))}
-    </ul>
   )
 }

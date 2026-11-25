@@ -8,11 +8,15 @@ import {
   clampCycles,
   emptyScenario,
   FORECAST_MAX_ITEMS,
+  hasScenarioAdjustments,
+  hasWhatIfChanges,
   isScenarioChanged,
   loadScenarioDraft,
   parseOptionalAmount,
   parseScenarioDraft,
   removeScenarioItem,
+  resetScenarioAdjustments,
+  resetWhatIfs,
   saveScenarioDraft,
   scenarioChangeRows,
   toggleSkippedBill,
@@ -71,6 +75,9 @@ describe('amount and cycle inputs', () => {
     expect(parseOptionalAmount('-5')).toBeNull()
     expect(parseOptionalAmount('0')).toBe(0)
     expect(parseOptionalAmount('4800.456')).toBe(4800.46)
+    expect(parseOptionalAmount('4000+800')).toBe(4800)
+    expect(parseOptionalAmount('12.5*3')).toBe(37.5)
+    expect(parseOptionalAmount('12abc')).toBeNull()
   })
 
   it('keeps the horizon between 1 and 12 cycles', () => {
@@ -147,5 +154,29 @@ describe('moving money between buckets', () => {
     expect(addScenarioItems(full, buildScenarioChange(move, ids()) as ForecastScenarioItem[]).items).toHaveLength(49)
     const [half] = buildScenarioChange(move, ids()) as ForecastScenarioItem[]
     expect(parseScenarioDraft(JSON.stringify({ ...emptyScenario(), items: [half] })).items).toEqual([])
+  })
+
+  it('resets what-ifs and cycle adjustments independently', () => {
+    const whatIf = { id: 'w1', label: 'Crown', date: '2026-12-10', amount: -1800, bucket: 'Essentials' as const }
+    const adjustItems = buildScenarioChange(move, ids()) as ForecastScenarioItem[]
+    let scenario = addScenarioItems(emptyScenario(), [whatIf], 'what-if')
+    scenario = toggleSkippedBill(scenario, 'gym:2026-12-05')
+    scenario = addScenarioItems(scenario, adjustItems, 'adjust')
+
+    expect(hasWhatIfChanges(scenario)).toBe(true)
+    expect(hasScenarioAdjustments(scenario)).toBe(true)
+    expect(scenarioChangeRows(scenario.items).find(row => row.isMove)?.isAdjustment).toBe(true)
+
+    const afterWhatIfReset = resetWhatIfs(scenario)
+    expect(hasWhatIfChanges(afterWhatIfReset)).toBe(false)
+    expect(hasScenarioAdjustments(afterWhatIfReset)).toBe(true)
+    expect(afterWhatIfReset.skippedBills).toEqual([])
+    expect(afterWhatIfReset.items.map(item => item.id)).toEqual(['id-2', 'id-3'])
+
+    const afterAdjustReset = resetScenarioAdjustments(scenario)
+    expect(hasWhatIfChanges(afterAdjustReset)).toBe(true)
+    expect(hasScenarioAdjustments(afterAdjustReset)).toBe(false)
+    expect(afterAdjustReset.items).toEqual([whatIf])
+    expect(afterAdjustReset.skippedBills).toEqual(['gym:2026-12-05'])
   })
 })
