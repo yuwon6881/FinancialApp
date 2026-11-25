@@ -192,6 +192,8 @@ export const PagedActivityTable = ({
   const [cashFlows, setCashFlows] = useState<InvestmentCashFlow[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [loadFailed, setLoadFailed] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
   const operationsRef = useRef(operations)
   const [projectedOperations, setProjectedOperations] = useState(operations)
   const accounts = useMemo(() => new Map(portfolio.accounts.map(value => [value.id, value.name])), [portfolio.accounts])
@@ -209,22 +211,26 @@ export const PagedActivityTable = ({
   useEffect(() => {
     const abort = new AbortController()
     setLoading(true)
+    setLoadFailed(false)
     const requestMode = mode
     const filters = { ...appliedFilters, page, pageSize }
     const work = mode === 'investments'
       ? api.fetchInvestmentActivity(filters, abort.signal)
       : api.fetchInvestmentCashFlows(filters, abort.signal)
     work.then(result => {
+      if (abort.signal.aborted) return
       setTotal(result.total)
       if (requestMode === 'investments') setTransactions(result.items as InvestmentActivity[])
       else setCashFlows(result.items as InvestmentCashFlow[])
       setProjectedOperations(operationsRef.current)
       const lastPage = Math.max(1, Math.ceil(result.total / pageSize))
       if (page > lastPage) setPage(lastPage)
-    }).catch(() => undefined)
+    }).catch(() => {
+      if (!abort.signal.aborted) setLoadFailed(true)
+    })
       .finally(() => { if (!abort.signal.aborted) setLoading(false) })
     return () => abort.abort()
-  }, [mode, appliedFilters, page, pageSize, refreshToken])
+  }, [mode, appliedFilters, page, pageSize, refreshToken, retryCount])
 
   const setField = (field: keyof Filters) => (value: string) => setDraft(previous => ({ ...previous, [field]: value }))
   const switchMode = (next: 'investments' | 'cash') => {
@@ -461,7 +467,12 @@ export const PagedActivityTable = ({
           </div>
         )}
         <div className={cn('transition-opacity duration-200', loading && 'pointer-events-none opacity-50')} aria-busy={loading}>
-          {rows.length === 0 ? (
+          {loadFailed ? (
+            <div className="space-y-2 px-5 py-6 text-center">
+              <p role="alert" className="text-label text-muted-foreground">Could not load activity.</p>
+              <Button variant="secondary" size="sm" onClick={() => setRetryCount(count => count + 1)}>Retry</Button>
+            </div>
+          ) : rows.length === 0 ? (
             <p className="px-5 py-6 text-center text-label text-muted-foreground sm:px-6">No activity matches these filters.</p>
           ) : !expanded ? (
             <div className="pb-2">{phoneList}</div>
@@ -505,7 +516,7 @@ export const PagedActivityTable = ({
           )}
         </div>
       </div>
-      {total > PAGE_SIZES[0] ? (
+      {!loadFailed && total > PAGE_SIZES[0] ? (
         <DataTableFooter>
           <DataTablePagination
             centerOnMobile
@@ -513,6 +524,7 @@ export const PagedActivityTable = ({
             pageSize={pageSize}
             totalItems={total}
             totalPages={pages}
+            serverIsFetching={loading}
             pageSizeOptions={PAGE_SIZES}
             onPageChange={setPage}
             onPageSizeChange={value => { setPageSize(value as (typeof PAGE_SIZES)[number]); setPage(1) }}

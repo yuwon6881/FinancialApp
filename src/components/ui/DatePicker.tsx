@@ -200,12 +200,6 @@ export function DatePicker({
     setActiveDate(next)
   }
 
-  const moveActiveByMonths = (months: number) => {
-    const active = parseISO(activeISO) ?? initialParsed
-    const next = new Date(active.year, active.month + months, active.day)
-    setActiveDate(next)
-  }
-
   const select = (iso: string) => {
     if ((min && iso < min) || (max && iso > max)) return
     onChange(iso)
@@ -390,10 +384,10 @@ export function DatePicker({
                       if (active) moveActiveByDays(6 - new Date(active.year, active.month, active.day).getDay())
                     } else if (event.key === 'PageUp') {
                       event.preventDefault()
-                      moveActiveByMonths(-1)
+                      goToMonth(viewDate.year, viewDate.month - 1)
                     } else if (event.key === 'PageDown') {
                       event.preventDefault()
-                      moveActiveByMonths(1)
+                      goToMonth(viewDate.year, viewDate.month + 1)
                     } else if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault()
                       select(cellISO)

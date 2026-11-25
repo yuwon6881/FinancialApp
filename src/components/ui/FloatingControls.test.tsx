@@ -149,6 +149,19 @@ describe('floating form controls', () => {
     expect(onChange).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ['2024-01-31', 'PageDown', 'February 2024', /29 February 2024|February 29, 2024/],
+    ['2025-03-31', 'PageUp', 'February 2025', /28 February 2025|February 28, 2025/],
+  ])('moves from %s to the last day when the adjacent month is shorter', (value, key, month, day) => {
+    render(<DatePicker value={value} onChange={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /Choose date/ }))
+
+    fireEvent.keyDown(screen.getByRole('gridcell', { selected: true }), { key })
+
+    expect(screen.getByRole('grid', { name: month })).toBeTruthy()
+    expect(screen.getByRole('gridcell', { name: day }).tabIndex).toBe(0)
+  })
+
   it('keeps clear as a sibling action and exposes disabled and invalid states', () => {
     const { rerender } = render(
       <DatePicker value="2026-07-17" onChange={vi.fn()} clearable invalid />,

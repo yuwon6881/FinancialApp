@@ -246,6 +246,32 @@ describe('InvestmentsView provider call boundaries', () => {
     expect(screen.getByRole('button', { name: 'Add activity' })).toBeTruthy()
   })
 
+  it('shows a retry instead of another year of activity when a history page fails', async () => {
+    vi.mocked(api.fetchInvestmentPortfolio).mockResolvedValue(tradablePortfolio)
+    const trade = {
+      id: 'recent', accountId: 'a1', instrumentId: 'i1', type: 'Buy' as const,
+      tradeDate: '2026-01-16', units: 1, unitPrice: 100, fees: 0, taxes: 0, createdAt: '',
+    }
+    vi.mocked(api.fetchInvestmentActivity)
+      .mockResolvedValueOnce({ items: [trade], total: 11, page: 1, pageSize: 10 })
+      .mockRejectedValueOnce(new Error('Network unavailable'))
+      .mockResolvedValueOnce({ items: [{ ...trade, id: 'older', tradeDate: '2024-01-16' }], total: 11, page: 2, pageSize: 10 })
+    renderView()
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Activity' }))
+    await screen.findByRole('button', { name: 'Edit Buy 2026-01-16' })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Next' })[0])
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Could not load activity')
+    expect(screen.queryByRole('button', { name: 'Edit Buy 2026-01-16' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+
+    expect(await screen.findByRole('button', { name: 'Edit Buy 2024-01-16' })).toBeTruthy()
+    expect(vi.mocked(api.fetchInvestmentActivity)).toHaveBeenLastCalledWith(
+      expect.objectContaining({ page: 2 }), expect.any(AbortSignal),
+    )
+  })
+
   it('debounces explicit searches and starts at three characters', async () => {
     vi.mocked(api.searchInvestmentInstruments).mockResolvedValue({
       results: [],

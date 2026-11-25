@@ -213,7 +213,20 @@ test('rewards pool reports this cycle pacing for an active commitment', async ({
 test('accounts bucket groups use the complete card shell', async ({ page }) => {
   await establishSession(page)
   await mockApi(page)
-  await page.goto('/wealth/accounts', { waitUntil: 'domcontentloaded' })
+  let releaseAccountsChunk!: () => void
+  const accountsChunkGate = new Promise<void>(resolve => { releaseAccountsChunk = resolve })
+  await page.route('**/assets/AccountsSection-*.js', async route => {
+    await accountsChunkGate
+    await route.continue()
+  })
+  try {
+    await page.goto('/wealth/accounts', { waitUntil: 'domcontentloaded' })
+    const creditDetails = page.getByTestId('accounts-skeleton').locator('.flex.justify-between.gap-3.px-3.py-2')
+    await expect(creditDetails).toBeVisible()
+    await expect(creditDetails).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  } finally {
+    releaseAccountsChunk()
+  }
 
   // The page sits on the canvas; each bucket's accounts are the card. Measure the first of them.
   await expect(page.getByRole('region', { name: 'Accounts', exact: true })).toBeVisible({ timeout: 15_000 })
