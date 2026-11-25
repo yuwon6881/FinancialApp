@@ -299,8 +299,8 @@ export function DatePicker({
             <ChevronLeft className="size-4" />
           </Button>
           <span aria-live="polite" className="sr-only">{monthLabel}</span>
-          <div className="flex items-center gap-2">
-            <span aria-hidden="true" className="select-none text-caption font-semibold">
+          <div className="flex items-center ps-2.5">
+            <span aria-hidden="true" className="select-none text-body font-medium">
               {MONTHS[viewDate.month]}
             </span>
             <FormFieldContext.Provider value={null}>

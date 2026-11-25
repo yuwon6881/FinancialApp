@@ -817,6 +817,12 @@ test('bill calendar stays anchored while changing months and jumping to another 
   }
 
   const year = calendar.getByRole('combobox', { name: 'Calendar year' })
+  const month = calendar.getByText('February', { exact: true })
+  const yearLabel = year.getByText('2027', { exact: true })
+  await expect(month).toHaveCSS('font-size', await yearLabel.evaluate(label => getComputedStyle(label).fontSize))
+  const monthBox = await month.boundingBox()
+  const chevronBox = await year.locator('svg').boundingBox()
+  expect(Math.abs((monthBox!.x + chevronBox!.x + chevronBox!.width) / 2 - (position!.x + position!.width / 2))).toBeLessThan(1)
   await year.click()
   const yearOptions = page.getByRole('listbox', { name: 'Calendar year' })
   await expect(yearOptions.getByRole('option', { name: '2027' })).toBeInViewport()

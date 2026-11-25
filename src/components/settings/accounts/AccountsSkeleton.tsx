@@ -51,7 +51,7 @@ export function AccountsSkeleton() {
                     <Skeleton className="h-4 w-16" />
                   </div>
                   {rowIdx === 2 && index === 1 && (
-                    <div className="flex justify-between gap-3 rounded-lg bg-card px-3 py-2">
+                    <div className="flex justify-between gap-3 px-3 py-2">
                       {[1, 2].map(column => <div key={column} className="space-y-1.5"><Skeleton className="h-3 w-20" /><Skeleton className="h-3.5 w-24" /></div>)}
                     </div>
                   )}
