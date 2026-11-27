@@ -10,6 +10,7 @@ interface LedgerExportModalProps {
   onExportPage: () => void
   onExportAll: () => void
   fullExportDisabled?: boolean
+  pageExportUnavailable?: boolean
   /** The period on screen, e.g. "current cycle" or "last 3 cycles". */
   scopeLabel?: string
   /** Rows the current page shows. */
@@ -31,6 +32,7 @@ export function LedgerExportModal({
   onExportPage,
   onExportAll,
   fullExportDisabled = false,
+  pageExportUnavailable = false,
   scopeLabel,
   pageCount,
   totalCount,
@@ -62,7 +64,7 @@ export function LedgerExportModal({
           <Button
             variant="secondary"
             onClick={onExportPage}
-            disabled={exportIsFetching}
+            disabled={exportIsFetching || pageExportUnavailable}
             className="rounded-xl px-4 py-2 text-xs font-semibold"
           >
             Export This Page
@@ -86,7 +88,7 @@ export function LedgerExportModal({
             <dd className="min-w-0 text-right text-foreground first-letter:uppercase">
               {scopeLabel}{filtered ? ', filtered' : ''}
             </dd>
-            {pageCount !== undefined && (
+            {!pageExportUnavailable && pageCount !== undefined && (
               <>
                 <dt>This page</dt>
                 <dd className="min-w-0 text-right text-foreground tabular-nums">{rowsLabel(pageCount)}</dd>
@@ -99,6 +101,9 @@ export function LedgerExportModal({
               </>
             )}
           </dl>
+        )}
+        {pageExportUnavailable && (
+          <p>This page can be exported after its saved transactions load.</p>
         )}
         {fullExportDisabled && (
           <p className="text-xs font-medium text-orange-500">

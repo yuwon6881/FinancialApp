@@ -30,7 +30,7 @@ import { cn } from '../../lib/utils'
 import { ADD_ANOTHER_ATTRIBUTE } from './transaction-form/useTransactionFormSubmit'
 import { CapturedAlertNotice } from './transaction-form/CapturedAlertNotice'
 import { BucketImpactLine } from './transaction-form/BucketImpactLine'
-import type { StabilityTopUpContext } from './transaction-form/useTransactionFormOptions'
+import type { StabilityTopUpContext, UseTransactionFormOptions } from './transaction-form/useTransactionFormOptions'
 
 const ReceiptSplitSheet = lazy(() =>
   import('./ReceiptSplitSheet').then(module => ({ default: module.ReceiptSplitSheet })))
@@ -59,10 +59,7 @@ export interface TransactionFormSheetProps {
   savingsGoals?: SavingsGoal[]
   activeRecurringPayments?: ActiveRecurringPayment[]
   ledgerSummaries?: CategorySummary[]
-  onAddTransaction: (
-    transaction: Omit<Transaction, 'id'>,
-    documentChanges?: TransactionDocumentChanges,
-  ) => Promise<string | void> | string | void
+  onAddTransaction: UseTransactionFormOptions['onAddTransaction']
   onUpdateTransaction?: (
     id: string,
     transaction: Omit<Transaction, 'id'>,
@@ -310,11 +307,25 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           'sm:-bottom-6 sm:-mb-6 sm:-mx-6 sm:px-6 sm:py-5',
           // Three stacked full-width buttons would pin a third of a phone screen; Cancel and
           // "add another" share a row under the primary action instead.
-          offersAddAnother && 'max-sm:flex-row max-sm:flex-wrap-reverse',
+          offersAddAnother ? 'max-sm:flex-row max-sm:flex-wrap' : 'max-sm:flex-col',
         )}>
           {form.state.errors.submit && (
             <p className="basis-full text-body text-destructive" role="alert">{form.state.errors.submit}</p>
           )}
+          {/* The first submit button is the browser's default when Enter is pressed in a field. */}
+          <Button
+            type="submit"
+            className={cn('sm:order-last', offersAddAnother && 'max-sm:basis-full')}
+            disabled={saveDisabled}
+            title={isEdit && securityPending
+              ? 'Finishing security check…'
+              : (isEdit || isRestrictedDraft) && props.hideSensitive ? 'Reveal sensitive data before saving'
+                : accountsLoading ? 'Loading accounts…' : undefined}
+          >
+            {form.isSubmitting
+              ? 'Saving…'
+              : form.state.mode === 'edit' ? 'Save Changes' : form.state.mode === 'draft' ? 'Save Draft' : 'Add Transaction'}
+          </Button>
           <Button
             variant="secondary"
             type="button"
@@ -335,19 +346,6 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
               Save &amp; new
             </Button>
           )}
-          <Button
-            type="submit"
-            className={offersAddAnother ? 'max-sm:basis-full' : undefined}
-            disabled={saveDisabled}
-            title={isEdit && securityPending
-              ? 'Finishing security check…'
-              : (isEdit || isRestrictedDraft) && props.hideSensitive ? 'Reveal sensitive data before saving'
-                : accountsLoading ? 'Loading accounts…' : undefined}
-          >
-            {form.isSubmitting
-              ? 'Saving…'
-              : form.state.mode === 'edit' ? 'Save Changes' : form.state.mode === 'draft' ? 'Save Draft' : 'Add Transaction'}
-          </Button>
         </ModalActions>
       </form>
     </BottomSheet>

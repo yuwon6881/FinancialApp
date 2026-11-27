@@ -24,6 +24,13 @@ describe('LedgerExportModal scope summary', () => {
     expect(screen.getByText('1 transaction')).toBeTruthy()
     expect(screen.queryByText('Entire result')).toBeNull()
   })
+
+  it('holds page export and hides the page count while saved rows are unavailable', () => {
+    render(<LedgerExportModal {...baseProps} scopeLabel="all cycles" pageCount={0} pageExportUnavailable />)
+    expect(screen.queryByText('0 transactions')).toBeNull()
+    expect((screen.getByRole('button', { name: 'Export This Page' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: 'Export Entire Result' }) as HTMLButtonElement).disabled).toBe(false)
+  })
 })
 
 describe('describeLedgerScope', () => {

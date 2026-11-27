@@ -6,6 +6,7 @@ import { useReceiptScanDraft } from './useReceiptScanDraft'
 import { useFormDraft } from '../../../lib/useFormDraft'
 import { useAutoOpenModal } from '../../../lib/useAutoOpenModal'
 import type {
+  AutocompleteSuggestion,
   Transaction,
   TransactionDocumentChanges,
   VaultDocument,
@@ -252,7 +253,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     return activeSuggestionEntries.slice(0, 12)
   }, [activeSuggestionEntries])
 
-  const handleSelectSuggestion = useCallback((suggestion: any) => {
+  const handleSelectSuggestion = useCallback((suggestion: AutocompleteSuggestion) => {
     descriptionRef.current = suggestion.description
     autocompletedDescriptionRef.current = suggestion.description.trim()
     dispatch({ type: 'SET_FIELD', field: 'description', value: suggestion.description })
@@ -266,15 +267,15 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
         dispatch({ type: 'SET_FIELD', field: 'category', value: suggestion.category })
       }
       // A captured purchase names its own account; only a typed entry borrows the last one used.
-      if (!state.captureId && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(suggestion.ledgerCategory)) {
-        const bucket = suggestion.ledgerCategory as TransferBucket
+      if (state.mode === 'create' && !state.captureId && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(suggestion.ledgerCategory)) {
+        const bucket = suggestion.ledgerCategory
         const current = state.accountId ? accounts.find(account => account.id === state.accountId) : undefined
         const keepsCurrent = current?.bucket === bucket && !current.isArchived
-        const remembered = keepsCurrent ? null : rememberedAccountForDescription(transactions, accounts, suggestion.description, bucket)
+        const remembered = keepsCurrent ? null : rememberedAccountForDescription(transactions, accounts, suggestion)
         if (remembered) dispatch({ type: 'SET_FIELD', field: 'accountId', value: remembered })
       }
     }
-  }, [accounts, state.accountId, state.captureId, state.transactionType, suggestions, transactions])
+  }, [accounts, state.accountId, state.captureId, state.mode, state.transactionType, suggestions, transactions])
 
   // The type-change effect below reads the bucket through a ref rather than depending on it, so it
   // runs once per type change and never reacts to the user's own later picks.
@@ -384,6 +385,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
   // Logging a stack of receipts: the sheet stays open on a blank entry, keeping only the type and
   // date. Bucket, category and account stay unpicked, as on any new entry.
   const reopenForAnother = (date: string, transactionType: 'inflow' | 'outflow' | 'transfer') => {
+    if (!defaultsStateRef.current.showAddForm) return
     suggestions.clearSuggestions()
     setExistingDocuments([])
     setInitialDocumentChanges({ pending: [], unlinkIds: [] })

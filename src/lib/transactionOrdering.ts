@@ -3,19 +3,21 @@ import { compareIdsOrdinal } from './ordinalCompare'
 
 export type TransactionSort = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'
 
-function transactionDay(transaction: Transaction): number {
+type TransactionPosition = Pick<Transaction, 'id' | 'date' | 'postedAt'>
+
+function transactionDay(transaction: TransactionPosition): number {
   const calendarDate = Date.parse(`${transaction.date}T00:00:00.000Z`)
   return Number.isFinite(calendarDate) ? calendarDate : 0
 }
 
-function transactionTime(transaction: Transaction): number {
+function transactionTime(transaction: TransactionPosition): number {
   const postedAt = transaction.postedAt ? Date.parse(transaction.postedAt) : NaN
   if (Number.isFinite(postedAt)) return postedAt
   return transactionDay(transaction)
 }
 
 /** Newest calendar date first, then newest creation timestamp within that date. */
-export function compareTransactionsNewestFirst(a: Transaction, b: Transaction): number {
+export function compareTransactionsNewestFirst(a: TransactionPosition, b: TransactionPosition): number {
   const dayDiff = transactionDay(b) - transactionDay(a)
   if (dayDiff !== 0) return dayDiff
 

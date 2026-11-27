@@ -344,10 +344,10 @@ export function AuthenticatedTabContent({
           transactions={financial.allTransactions}
           accounts={financial.allAccounts}
           autocompleteSuggestions={financial.autocompleteSuggestions}
-          onAddTransaction={async (tx, documents) => {
+          onAddTransaction={async (tx, documents, options) => {
             let deferredTab: AppTab | null = null
             const draftId = await financial.handleAddTransaction(tx, tab => { deferredTab = tab }, documents)
-            if (deferredTab) {
+            if (deferredTab && !options?.addAnother) {
               deferTabChange(prefs.setActiveTab, deferredTab)
             }
             return draftId

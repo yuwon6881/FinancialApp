@@ -203,6 +203,7 @@ describe('saving and adding another', () => {
     await act(async () => result.current.handleSubmit(submitEvent(true)))
     expect(onAddTransaction).toHaveBeenCalledTimes(1)
     expect(onAddTransaction.mock.calls[0][0]).toMatchObject({ description: 'Lunch', amount: -12.5, accountId: 'bank' })
+    expect(onAddTransaction.mock.calls[0][2]).toEqual({ addAnother: true })
     expect(result.current.state.showAddForm).toBe(true)
     expect(result.current.state.mode).toBe('create')
     expect(result.current.state.date).toBe('2026-11-20')
@@ -231,5 +232,24 @@ describe('saving and adding another', () => {
     expect(result.current.state.showAddForm).toBe(true)
     expect(result.current.state.description).toBe('Lunch')
     expect(result.current.state.errors.submit).toBeTruthy()
+  })
+
+  it('honors dismissal while a Save & new request is still running', async () => {
+    let finishSave: (() => void) | undefined
+    const onAddTransaction = vi.fn(() => new Promise<void>(resolve => { finishSave = resolve }))
+    const { result } = renderHook(() => useTransactionForm(createOptions({ accounts, onAddTransaction })))
+    await act(async () => result.current.openFresh())
+    fill(result)
+
+    let save: Promise<void>
+    act(() => { save = result.current.handleSubmit(submitEvent(true)) })
+    await act(async () => result.current.handleCloseForm())
+    await act(async () => {
+      finishSave?.()
+      await save
+    })
+
+    expect(onAddTransaction).toHaveBeenCalledTimes(1)
+    expect(result.current.state.showAddForm).toBe(false)
   })
 })

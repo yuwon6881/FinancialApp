@@ -11,6 +11,7 @@ import {
   setSwipeLocked,
 } from '../../lib/swipeLock'
 import { resolveSwipeTarget } from './swipeableRowMath'
+import { Button } from './Button'
 
 interface SwipeableRowProps {
   children: React.ReactNode
@@ -23,10 +24,10 @@ interface SwipeableRowProps {
   hint?: boolean
   id?: string
   /**
-   * Pointer shortcut for tapping the closed row's body. It must duplicate an action the row
-   * already offers, because keyboard and screen-reader users reach that action, not the tap.
+   * Pointer shortcut for tapping the closed row's body.
    */
   onTap?: () => void
+  actionsLabel?: string
   /**
    * `card` is a free-standing rounded row; `flush` is a row inside a grouped list whose container
    * owns the radius, so neither the row nor its action drawer rounds its own corners.
@@ -44,6 +45,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   disabled = false,
   id,
   onTap,
+  actionsLabel,
   variant = 'card',
 }) => {
   const flush = variant === 'flush'
@@ -55,6 +57,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const settleAnimationRef = useRef<{ stop: () => void } | null>(null)
   const suppressNextClick = useRef(false)
   const actionDrawerRef = useRef<HTMLDivElement>(null)
+  const actionTriggerRef = useRef<HTMLButtonElement>(null)
   const focusActionsOnOpenRef = useRef(false)
   const generatedActionsId = useId().replace(/:/g, '')
   const actionsId = id ? `${id}-actions` : `swipe-row-actions-${generatedActionsId}`
@@ -116,8 +119,9 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   useEffect(() => {
     if (!open) return
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
+      if (event.key !== 'Escape' || event.defaultPrevented) return
       event.preventDefault()
+      if (actionDrawerRef.current?.contains(document.activeElement)) actionTriggerRef.current?.focus()
       close()
     }
     document.addEventListener('keydown', closeOnEscape)
@@ -127,8 +131,10 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   const closeForAction = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement | null
     if (!target?.closest?.('button, a, [role="button"], [data-swipe-action]')) return
+    if (e.detail === 0 && actionDrawerRef.current?.contains(document.activeElement)) {
+      actionTriggerRef.current?.focus({ preventScroll: true })
+    }
     close()
-
   }, [close])
 
   // Mobile browsers hold back the synthesized `click` event for a defensive
@@ -266,6 +272,21 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
 
   return (
     <div id={id} className={cn('relative isolate w-full overflow-hidden bg-card', !flush && 'rounded-panel')}>
+      {actionsLabel && (
+        <Button
+          ref={actionTriggerRef}
+          variant="secondary"
+          size="sm"
+          aria-label={actionsLabel}
+          aria-controls={actionsId}
+          aria-expanded={open}
+          disabled={disabled}
+          className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:bottom-2 focus-visible:right-2 focus-visible:z-20"
+          onClick={() => open ? close() : openActions(true)}
+        >
+          Row actions
+        </Button>
+      )}
       {/* Action drawer sitting behind the content */}
       <div
         ref={actionDrawerRef}
@@ -314,7 +335,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         onPointerCancel={handleDragCancel}
         style={{ touchAction: 'pan-y', willChange: 'transform', x, backgroundColor: 'var(--card)' }}
         onClick={event => {
-          if (suppressNextClick.current) return
+          if (disabled || suppressNextClick.current) return
           if (open) {
             close()
             return

@@ -54,7 +54,11 @@ export interface UseTransactionFormOptions {
   savingsGoals?: SavingsGoal[]
   activeRecurringPayments?: ActiveRecurringPayment[]
   ledgerSummaries?: CategorySummary[]
-  onAddTransaction: (transaction: Omit<Transaction, 'id'>, documentChanges?: TransactionDocumentChanges) => Promise<string | void> | string | void
+  onAddTransaction: (
+    transaction: Omit<Transaction, 'id'>,
+    documentChanges?: TransactionDocumentChanges,
+    options?: { addAnother: boolean },
+  ) => Promise<string | void> | string | void
   onUpdateTransaction?: (id: string, transaction: Omit<Transaction, 'id'>, documentChanges?: TransactionDocumentChanges) => Promise<void> | void
   onUpdateDraftTransaction?: (id: string, transaction: Omit<Transaction, 'id'>, documentChanges: TransactionDocumentChanges) => Promise<void> | void
   onLoadDraftDocumentChanges?: (id: string) => Promise<TransactionDocumentChanges>

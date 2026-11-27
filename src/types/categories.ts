@@ -1,3 +1,5 @@
+import type { Transaction } from './ledger'
+
 export type CategoryFlowType = 'both' | 'inflow' | 'outflow'
 
 export interface TransactionCategory {
@@ -17,6 +19,7 @@ export interface AutocompleteSuggestion {
   category: string
   ledgerCategory: string
   txType: "inflow" | "outflow"
+  source?: Pick<Transaction, 'id' | 'date' | 'postedAt' | 'accountId'>
 }
 
 export interface WishlistItem {

@@ -38,7 +38,7 @@ import { LedgerActiveFilterSummary } from './ledger/LedgerActiveFilterSummary'
 import { hasEffectiveAmountFilter } from './ledger/view/ledgerViewTypes'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
 import { describeLedgerScope } from '../lib/ledgerScopeLabel'
-import type { StabilityTopUpContext } from './ledger/transaction-form/useTransactionFormOptions'
+import type { StabilityTopUpContext, UseTransactionFormOptions } from './ledger/transaction-form/useTransactionFormOptions'
 
 const LedgerExportModal = React.lazy(() =>
   import('./ledger/LedgerExportModal').then(module => ({ default: module.LedgerExportModal })))
@@ -47,10 +47,7 @@ interface LedgerViewProps {
   transactions: Transaction[]
   accounts?: LedgerAccount[]
   autocompleteSuggestions?: AutocompleteSuggestion[]
-  onAddTransaction: (
-    transaction: Omit<Transaction, 'id'>,
-    documentChanges?: TransactionDocumentChanges,
-  ) => Promise<string | void> | string | void
+  onAddTransaction: UseTransactionFormOptions['onAddTransaction']
   onDeleteTransaction: (id: string, transaction?: Transaction, attachedDocumentIdsToDelete?: number[]) => Promise<void> | void
   onUpdateTransaction?: (
     id: string,
@@ -236,6 +233,9 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
     [ledger.displayTransactions, activeBucketFilter])
   const isServerMode = props.showAllCycles
   const serverTotal = ledger.serverResult?.total ?? 0
+  const exportPageUnavailable = isServerMode && (
+    !ledger.serverResult || ledger.serverIsReplacingRows || Boolean(ledger.serverError)
+  )
   const activeStartDate = props.showAllCycles ? ledger.appliedStartDate : ledger.selectedStartDate
   const activeEndDate = props.showAllCycles ? ledger.appliedEndDate : ledger.selectedEndDate
   const activeMinAmount = props.showAllCycles ? ledger.appliedMinAmount : ledger.selectedMinAmount
@@ -499,9 +499,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
             onExportPage={ledger.handleExportPage}
             onExportAll={ledger.handleExportAll}
             fullExportDisabled={props.showAllCycles && ledger.hasMatchingPendingTransactions}
+            pageExportUnavailable={exportPageUnavailable}
             scopeLabel={describeLedgerScope(props)}
             pageCount={ledger.displayTransactions.length}
-            totalCount={isServerMode ? (ledger.serverResult ? serverTotal : null) : ledger.filteredTransactions.length}
+            totalCount={isServerMode ? (exportPageUnavailable ? null : serverTotal) : ledger.filteredTransactions.length}
             filtered={hasAnyFilter}
           />
         </React.Suspense>

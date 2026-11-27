@@ -196,7 +196,7 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
         if (!capture) throw new Error('Transaction detection is unavailable. Close and reopen the review.')
         await capture.save(state.captureId, mapped)
       } else {
-        await onAddTransaction(mapped, documentChanges)
+        await onAddTransaction(mapped, documentChanges, { addAnother })
       }
       if (isTransactionOutsideCycle(mapped.date, selectedMonth, selectedYear, cycleDay)) {
         onOutsideCycleSave?.(mapped.date)
