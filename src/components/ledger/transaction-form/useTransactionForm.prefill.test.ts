@@ -141,3 +141,95 @@ describe('applying a computed share to the transaction sheet', () => {
     expect(result.current.state.editingId).toBeNull()
   })
 })
+
+describe('picking a remembered description', () => {
+  const accounts = [
+    { id: 'bank', name: 'Bank', bucket: 'Essentials', isArchived: false } as any,
+    { id: 'card', name: 'Card', bucket: 'Essentials', isArchived: false } as any,
+  ]
+  const history: Transaction[] = [{ ...transaction('earlier'), description: 'Grab', accountId: 'card' }]
+  const suggestion = { description: 'Grab', category: 'Food', ledgerCategory: 'Essentials', txType: 'outflow' as const }
+
+  it('selects the account last used for that description in a multi-account bucket', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({ accounts, transactions: history })))
+    await act(async () => result.current.openFresh())
+    act(() => result.current.handleSelectSuggestion(suggestion))
+    expect(result.current.state.ledgerCategory).toBe('Essentials')
+    expect(result.current.state.accountId).toBe('card')
+  })
+
+  it('keeps an account the user already chose in that bucket', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({ accounts, transactions: history })))
+    await act(async () => result.current.openFresh())
+    act(() => result.current.dispatch({ type: 'SET_FIELD', field: 'ledgerCategory', value: 'Essentials' }))
+    act(() => result.current.dispatch({ type: 'SET_FIELD', field: 'accountId', value: 'bank' }))
+    act(() => result.current.handleSelectSuggestion(suggestion))
+    expect(result.current.state.accountId).toBe('bank')
+  })
+
+  it('leaves the account empty when the description has no history', async () => {
+    const { result } = renderHook(() => useTransactionForm(createOptions({ accounts, transactions: [] })))
+    await act(async () => result.current.openFresh())
+    act(() => result.current.handleSelectSuggestion(suggestion))
+    expect(result.current.state.accountId).toBeFalsy()
+  })
+})
+
+describe('saving and adding another', () => {
+  const accounts = [{ id: 'bank', name: 'Bank', bucket: 'Essentials', isArchived: false } as any]
+  const fill = (result: { current: ReturnType<typeof useTransactionForm> }) => {
+    const set = (field: string, value: unknown) => result.current.dispatch({ type: 'SET_FIELD', field: field as any, value })
+    act(() => {
+      set('description', 'Lunch')
+      set('amount', '12.50')
+      set('date', '2026-11-20')
+      set('ledgerCategory', 'Essentials')
+      set('category', 'Food')
+      set('accountId', 'bank')
+    })
+  }
+  const submitEvent = (addAnother: boolean) => {
+    const submitter = document.createElement('button')
+    if (addAnother) submitter.setAttribute('data-add-another', 'true')
+    const form = document.createElement('form')
+    return { preventDefault: vi.fn(), currentTarget: form, nativeEvent: { submitter } } as any
+  }
+
+  it('keeps the sheet open on a blank entry that keeps only the date', async () => {
+    const onAddTransaction = vi.fn()
+    const { result } = renderHook(() => useTransactionForm(createOptions({ accounts, onAddTransaction })))
+    await act(async () => result.current.openFresh())
+    fill(result)
+    await act(async () => result.current.handleSubmit(submitEvent(true)))
+    expect(onAddTransaction).toHaveBeenCalledTimes(1)
+    expect(onAddTransaction.mock.calls[0][0]).toMatchObject({ description: 'Lunch', amount: -12.5, accountId: 'bank' })
+    expect(result.current.state.showAddForm).toBe(true)
+    expect(result.current.state.mode).toBe('create')
+    expect(result.current.state.date).toBe('2026-11-20')
+    expect(result.current.state.description).toBe('')
+    expect(result.current.state.amount).toBe('')
+    expect(result.current.state.ledgerCategory).toBe('')
+    expect(result.current.state.category).toBe('')
+  })
+
+  it('closes after an ordinary save', async () => {
+    const onAddTransaction = vi.fn()
+    const { result } = renderHook(() => useTransactionForm(createOptions({ accounts, onAddTransaction })))
+    await act(async () => result.current.openFresh())
+    fill(result)
+    await act(async () => result.current.handleSubmit(submitEvent(false)))
+    expect(onAddTransaction).toHaveBeenCalledTimes(1)
+    expect(result.current.state.showAddForm).toBe(false)
+  })
+
+  it('stays open with the entry intact when the save fails', async () => {
+    const onAddTransaction = vi.fn().mockRejectedValue(new Error('offline'))
+    const { result } = renderHook(() => useTransactionForm(createOptions({ accounts, onAddTransaction })))
+    await act(async () => result.current.openFresh())
+    fill(result)
+    await act(async () => result.current.handleSubmit(submitEvent(true)))
+    expect(result.current.state.showAddForm).toBe(true)
+    expect(result.current.state.description).toBe('Lunch')
+    expect(result.current.state.errors.submit).toBeTruthy()
+  })
+})

@@ -2,7 +2,7 @@ import React from 'react'
 import { X } from 'lucide-react'
 import { Button } from '../ui/Button'
 import type { LedgerAccount } from '../../types'
-import { getCycleLabelForDropdown } from '../../lib/cycleLabels'
+import { describeLedgerScope } from '../../lib/ledgerScopeLabel'
 import {
   type TransactionSearchMode,
   type TxTypeFilter,
@@ -62,17 +62,9 @@ export const LedgerActiveFilterSummary: React.FC<LedgerActiveFilterSummaryProps>
   const hasScopedRange = showAllCycles && cyclesRange && cyclesRange !== 'monthly' && cyclesRange !== 'all'
   if (!hasAnyFilter && !hasScopedRange) return null
 
-  const parts: string[] = []
-  if (showAllCycles) {
-    if (cyclesRange === '3month') parts.push('last 3 cycles')
-    else if (cyclesRange === '6month') parts.push('last 6 cycles')
-    else if (cyclesRange === 'yearly') parts.push(`full year ${selectedYear}`)
-    else parts.push('all cycles')
-  } else {
-    parts.push(isCurrentCycle !== false
-      ? 'current cycle'
-      : getCycleLabelForDropdown(selectedMonth, selectedYear, cycleDay))
-  }
+  const parts: string[] = [
+    describeLedgerScope({ showAllCycles, cyclesRange, isCurrentCycle, selectedMonth, selectedYear, cycleDay }),
+  ]
 
   const filterDetails: string[] = []
   const { buckets: selectedBuckets, categories: selectedCats } =

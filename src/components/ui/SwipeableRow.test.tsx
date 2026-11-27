@@ -1,5 +1,6 @@
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it, beforeEach } from 'vitest'
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, beforeEach, vi } from 'vitest'
+import { clearSwipeRowCloser, registerSwipeRowCloser } from '../../lib/swipeLock'
 import { SwipeableRow } from './SwipeableRow'
 import { resolveSwipeTarget } from './swipeableRowMath'
 
@@ -123,5 +124,53 @@ describe('SwipeableRow closed-state opacity', () => {
     expect(drawer.className).not.toContain('gap-1.5')
     expect(drawer.className).not.toContain('p-1.5')
     expect(drawer.querySelectorAll('button')).toHaveLength(3)
+  })
+})
+
+describe('SwipeableRow tap shortcut', () => {
+  beforeEach(() => {
+    window.innerWidth = 500
+  })
+
+  it('runs onTap when the closed row body is tapped', () => {
+    const onTap = vi.fn()
+    render(
+      <SwipeableRow actions={<button type="button">Delete</button>} onTap={onTap}>
+        <p>Row body</p>
+      </SwipeableRow>,
+    )
+    fireEvent.click(screen.getByText('Row body'))
+    expect(onTap).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves a control inside the row to handle its own click', () => {
+    const onTap = vi.fn()
+    const onCheck = vi.fn()
+    render(
+      <SwipeableRow actions={<button type="button">Delete</button>} onTap={onTap}>
+        <input type="checkbox" aria-label="Select row" onChange={onCheck} />
+        <p>Row body</p>
+      </SwipeableRow>,
+    )
+    fireEvent.click(screen.getByLabelText('Select row'))
+    expect(onCheck).toHaveBeenCalledTimes(1)
+    expect(onTap).not.toHaveBeenCalled()
+  })
+
+  it('only dismisses another open row on the first tap', () => {
+    const onTap = vi.fn()
+    const closeOther = vi.fn()
+    registerSwipeRowCloser(closeOther)
+    render(
+      <SwipeableRow actions={<button type="button">Delete</button>} onTap={onTap}>
+        <p>Row body</p>
+      </SwipeableRow>,
+    )
+    fireEvent.click(screen.getByText('Row body'))
+    expect(closeOther).toHaveBeenCalledTimes(1)
+    expect(onTap).not.toHaveBeenCalled()
+    clearSwipeRowCloser(closeOther)
+    fireEvent.click(screen.getByText('Row body'))
+    expect(onTap).toHaveBeenCalledTimes(1)
   })
 })

@@ -1,6 +1,6 @@
 import React from 'react'
 import { ChevronRight, Repeat, X } from 'lucide-react'
-import type { ActiveRecurringPayment, RecurringPayment, RecurringReminderSettings } from '../../types'
+import type { ActiveRecurringPayment, LedgerAccount, RecurringPayment, RecurringReminderSettings } from '../../types'
 import { describeBillDue, getBillCycleState, groupBills, type BillCycleState } from '../../lib/billGroups'
 import { useIsDenseContent } from '../../lib/breakpoints'
 import { getCategoryDotClass } from '../../lib/categoryColors'
@@ -37,6 +37,7 @@ interface RecurringBillsProps {
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
   onNavigateToLoan?: (loanId: string) => void
+  accounts?: LedgerAccount[]
 }
 
 interface BillRow {

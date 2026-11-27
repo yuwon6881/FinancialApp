@@ -1,6 +1,6 @@
 import React from 'react'
 import { ChevronRight, FastForward, Link2, Pencil, Trash2 } from 'lucide-react'
-import type { RecurringPayment, RecurringReminderSettings } from '../../types'
+import type { LedgerAccount, RecurringPayment, RecurringReminderSettings } from '../../types'
 import type { BillCycleState } from '../../lib/billGroups'
 import { hasBillingEnded, isEligibleForPayEarly, normalizeRecurringFrequency, RECURRING_PAYMENT_MODE_LABELS } from '../../lib/recurringPayments'
 import { cn } from '../../lib/utils'
@@ -29,6 +29,8 @@ export interface BillDetailProps {
   onUpdateReminder?: (id: string, settings: RecurringReminderSettings) => void
   onRequestPayEarly?: (id: string) => void
   onNavigateToLoan?: (loanId: string) => void
+  /** Ledger accounts, to name the one this bill is paid from. */
+  accounts?: LedgerAccount[]
   /** The sheet on phones already titles itself with the bill's name. */
   showTitle?: boolean
 }
@@ -55,8 +57,10 @@ export const BillDetail: React.FC<BillDetailProps> = ({
   onUpdateReminder,
   onRequestPayEarly,
   onNavigateToLoan,
+  accounts,
   showTitle = true,
 }) => {
+  const paidFrom = accounts?.find(account => account.id === rp.accountId)
   const isBusy = isPaymentDeleting(rp.id) || isPaymentSyncing(rp.id) || rp.isPendingSync
   const isEnded = hasBillingEnded(rp)
   const isAnnual = normalizeRecurringFrequency(rp.frequency) === 'Annually'
@@ -132,6 +136,14 @@ export const BillDetail: React.FC<BillDetailProps> = ({
         <dd className="min-w-0 text-right text-foreground">{RECURRING_PAYMENT_MODE_LABELS[rp.paymentMode]}</dd>
         <dt className="text-muted-foreground">Bucket</dt>
         <dd className="min-w-0 text-right"><LedgerAllocationBadge ledgerCategory={rp.ledgerCategory} transactionId={rp.id} /></dd>
+        {paidFrom && (
+          <>
+            <dt className="text-muted-foreground">Paid from</dt>
+            <dd className="min-w-0 truncate text-right text-foreground" title={paidFrom.name}>
+              {paidFrom.name}{paidFrom.isArchived && <span className="text-muted-foreground"> (Closed)</span>}
+            </dd>
+          </>
+        )}
         <dt className="text-muted-foreground">Starts</dt>
         <dd className="min-w-0 text-right text-foreground tabular-nums">{rp.startDate}</dd>
         {rp.endDate && (

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import type { LedgerAccount, Transaction } from '../../types'
-import { DesktopLedgerRow } from './LedgerRows'
+import { DesktopLedgerRow, MobileLedgerRow } from './LedgerRows'
 
 const transaction = (
   intent: Transaction['stabilityReloadIntent'],
@@ -128,5 +128,34 @@ describe('MobileLedgerRow layout', () => {
     expect(reloadEl).toBeTruthy()
     expect(reloadEl.parentElement?.className).toContain('text-muted-foreground')
     expect(reloadEl.parentElement?.className).not.toContain('rounded-md')
+  })
+})
+
+describe('MobileLedgerRow tap to edit', () => {
+  const plain: Transaction = { id: 'lunch', date: '2026-08-10', description: 'Lunch', category: 'Food', ledgerCategory: 'Essentials', amount: -12 }
+
+  it('opens the editor when the row body is tapped', () => {
+    window.innerWidth = 500
+    const rowProps = props(plain)
+    render(<MobileLedgerRow {...rowProps} hint={false} />)
+    fireEvent.click(screen.getByText('Food'))
+    expect(rowProps.onStartEdit).toHaveBeenCalledWith(plain)
+  })
+
+  it('does nothing while sensitive data is hidden', () => {
+    window.innerWidth = 500
+    const rowProps = { ...props(plain), hideSensitive: true }
+    render(<MobileLedgerRow {...rowProps} hint={false} />)
+    fireEvent.click(screen.getByText('Food'))
+    expect(rowProps.onStartEdit).not.toHaveBeenCalled()
+  })
+
+  it('toggles selection instead of editing while selecting', () => {
+    window.innerWidth = 500
+    const rowProps = { ...props(plain), isSelecting: true }
+    render(<MobileLedgerRow {...rowProps} hint={false} />)
+    fireEvent.click(screen.getByText('Food'))
+    expect(rowProps.onToggleSelected).toHaveBeenCalledWith(plain)
+    expect(rowProps.onStartEdit).not.toHaveBeenCalled()
   })
 })

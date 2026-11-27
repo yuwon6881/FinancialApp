@@ -37,6 +37,7 @@ import { LedgerServerStatus } from './ledger/LedgerServerStatus'
 import { LedgerActiveFilterSummary } from './ledger/LedgerActiveFilterSummary'
 import { hasEffectiveAmountFilter } from './ledger/view/ledgerViewTypes'
 import { getCycleLabelForDropdown } from '../lib/cycleLabels'
+import { describeLedgerScope } from '../lib/ledgerScopeLabel'
 import type { StabilityTopUpContext } from './ledger/transaction-form/useTransactionFormOptions'
 
 const LedgerExportModal = React.lazy(() =>
@@ -498,6 +499,10 @@ export const LedgerView: React.FC<LedgerViewProps> = (props) => {
             onExportPage={ledger.handleExportPage}
             onExportAll={ledger.handleExportAll}
             fullExportDisabled={props.showAllCycles && ledger.hasMatchingPendingTransactions}
+            scopeLabel={describeLedgerScope(props)}
+            pageCount={ledger.displayTransactions.length}
+            totalCount={isServerMode ? (ledger.serverResult ? serverTotal : null) : ledger.filteredTransactions.length}
+            filtered={hasAnyFilter}
           />
         </React.Suspense>
       )}

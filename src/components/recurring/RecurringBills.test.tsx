@@ -302,3 +302,29 @@ describe('RecurringBills below the wide tier', () => {
     expect(within(sheet).getByText('Manual payment')).toBeTruthy()
   })
 })
+
+describe('RecurringBills paid-from account', () => {
+  beforeAll(() => {
+    Element.prototype.scrollIntoView = vi.fn()
+  })
+  const account = (overrides: Record<string, unknown> = {}) => ({
+    id: 'acct-essentials', name: 'Maybank Savings', bucket: 'Essentials', kind: 'Bank', isArchived: false,
+    remaining: 0, createdAt: '', updatedAt: '', ...overrides,
+  }) as any
+
+  it('names the account the bill is paid from', () => {
+    renderCards([basePayment], { accounts: [account()] })
+    expect(screen.getByText('Paid from')).toBeTruthy()
+    expect(screen.getByText('Maybank Savings')).toBeTruthy()
+  })
+
+  it('marks a closed account', () => {
+    renderCards([basePayment], { accounts: [account({ isArchived: true })] })
+    expect(screen.getByText('(Closed)')).toBeTruthy()
+  })
+
+  it('omits the line rather than guessing when the account is not loaded', () => {
+    renderCards([basePayment], { accounts: [] })
+    expect(screen.queryByText('Paid from')).toBeNull()
+  })
+})

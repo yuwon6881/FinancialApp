@@ -10,7 +10,17 @@ interface LedgerExportModalProps {
   onExportPage: () => void
   onExportAll: () => void
   fullExportDisabled?: boolean
+  /** The period on screen, e.g. "current cycle" or "last 3 cycles". */
+  scopeLabel?: string
+  /** Rows the current page shows. */
+  pageCount?: number
+  /** Rows the whole matching result holds; absent while it is still unknown. */
+  totalCount?: number | null
+  /** Whether a search or filter narrows the result. */
+  filtered?: boolean
 }
+
+const rowsLabel = (count: number) => `${count.toLocaleString()} ${count === 1 ? 'transaction' : 'transactions'}`
 
 // The "Export Ledger CSV" bottom sheet. All the export logic (page vs. full
 // result, server-side download) stays in LedgerView; this is purely the modal.
@@ -21,6 +31,10 @@ export function LedgerExportModal({
   onExportPage,
   onExportAll,
   fullExportDisabled = false,
+  scopeLabel,
+  pageCount,
+  totalCount,
+  filtered = false,
 }: LedgerExportModalProps) {
   return (
     <BottomSheet
@@ -66,6 +80,26 @@ export function LedgerExportModal({
       }
     >
       <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+        {scopeLabel && (
+          <dl className="grid grid-cols-[minmax(0,auto)_minmax(0,1fr)] gap-x-4 gap-y-1.5 text-label">
+            <dt>Showing</dt>
+            <dd className="min-w-0 text-right text-foreground first-letter:uppercase">
+              {scopeLabel}{filtered ? ', filtered' : ''}
+            </dd>
+            {pageCount !== undefined && (
+              <>
+                <dt>This page</dt>
+                <dd className="min-w-0 text-right text-foreground tabular-nums">{rowsLabel(pageCount)}</dd>
+              </>
+            )}
+            {totalCount != null && (
+              <>
+                <dt>Entire result</dt>
+                <dd className="min-w-0 text-right text-foreground tabular-nums">{rowsLabel(totalCount)}</dd>
+              </>
+            )}
+          </dl>
+        )}
         {fullExportDisabled && (
           <p className="text-xs font-medium text-orange-500">
             Full export becomes available after matching transactions finish syncing.

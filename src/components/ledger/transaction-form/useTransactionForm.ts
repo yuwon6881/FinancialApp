@@ -22,6 +22,7 @@ import { useTransactionOutflowWarning } from './useTransactionOutflowWarning'
 import { useTransactionFormLifecycle } from './useTransactionFormLifecycle'
 import { useTransactionFormSubmit } from './useTransactionFormSubmit'
 import { useCapturedPurchaseForm } from './useCapturedPurchaseForm'
+import { rememberedAccountForDescription } from '../../../lib/transactionAccountMemory'
 
 export type { UseTransactionFormOptions } from './useTransactionFormOptions'
 
@@ -264,8 +265,16 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
       if (suggestion.category) {
         dispatch({ type: 'SET_FIELD', field: 'category', value: suggestion.category })
       }
+      // A captured purchase names its own account; only a typed entry borrows the last one used.
+      if (!state.captureId && ['Essentials', 'Growth', 'Stability', 'Rewards'].includes(suggestion.ledgerCategory)) {
+        const bucket = suggestion.ledgerCategory as TransferBucket
+        const current = state.accountId ? accounts.find(account => account.id === state.accountId) : undefined
+        const keepsCurrent = current?.bucket === bucket && !current.isArchived
+        const remembered = keepsCurrent ? null : rememberedAccountForDescription(transactions, accounts, suggestion.description, bucket)
+        if (remembered) dispatch({ type: 'SET_FIELD', field: 'accountId', value: remembered })
+      }
     }
-  }, [state.transactionType, suggestions])
+  }, [accounts, state.accountId, state.captureId, state.transactionType, suggestions, transactions])
 
   // The type-change effect below reads the bucket through a ref rather than depending on it, so it
   // runs once per type change and never reacts to the user's own later picks.
@@ -372,6 +381,21 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     void lifecycle.handleCloseForm()
   }, [hideSensitive, isRestrictedOpenMode, lifecycle.handleCloseForm, state.showAddForm])
 
+  // Logging a stack of receipts: the sheet stays open on a blank entry, keeping only the type and
+  // date. Bucket, category and account stay unpicked, as on any new entry.
+  const reopenForAnother = (date: string, transactionType: 'inflow' | 'outflow' | 'transfer') => {
+    suggestions.clearSuggestions()
+    setExistingDocuments([])
+    setInitialDocumentChanges({ pending: [], unlinkIds: [] })
+    setDocumentFieldRevision(revision => revision + 1)
+    dispatch({ type: 'OPEN_CREATE', payload: { defaultCategory: '', todayDate } })
+    if (transactionType !== 'outflow') dispatch({ type: 'SET_FIELD', field: 'transactionType', value: transactionType })
+    if (date) dispatch({ type: 'SET_FIELD', field: 'date', value: date })
+    descriptionRef.current = ''
+    autocompletedDescriptionRef.current = null
+    window.setTimeout(() => firstInputRef.current?.focus(), 0)
+  }
+
   const { handleSubmit, isSubmitting } = useTransactionFormSubmit({
     state,
     dispatch,
@@ -402,6 +426,7 @@ export function useTransactionForm(options: UseTransactionFormOptions) {
     todayDate,
     clearFormDraft,
     scanner,
+    reopenForAnother,
   })
 
   const { bucketOutflowWarning, bucketImpact } = useTransactionOutflowWarning(state, transactions, options)

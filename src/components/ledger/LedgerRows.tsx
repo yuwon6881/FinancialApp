@@ -268,6 +268,11 @@ export const MobileLedgerRow = React.memo(function MobileLedgerRow(props: Ledger
         disabled={props.isDeleting}
         contentClassName="pr-4"
         actionsWidth={props.onMove ? 216 : 144}
+        // Tapping the row edits it (or toggles it while selecting); swipe stays the shortcut to
+        // Move and Delete. The same actions remain reachable as buttons for keyboard users.
+        onTap={props.isSelecting
+          ? () => { if (props.canSelect(transaction)) props.onToggleSelected(transaction) }
+          : editBlocked || !busy ? edit : undefined}
         actions={<>
           <Button variant="tertiary" onClick={edit} disabled={!editBlocked && busy} aria-label={editLabel} className={cn(DRAWER_ACTION, 'bg-surface-3 text-foreground hover:bg-surface-3')}>
             <Pencil className="size-4" aria-hidden="true" />Edit

@@ -6,6 +6,7 @@ import { triggerHaptic } from '../../lib/haptics'
 import {
   clearSwipeRowCloser,
   closeOpenSwipeableRow,
+  hasOpenSwipeableRow,
   registerSwipeRowCloser,
   setSwipeLocked,
 } from '../../lib/swipeLock'
@@ -22,6 +23,11 @@ interface SwipeableRowProps {
   hint?: boolean
   id?: string
   /**
+   * Pointer shortcut for tapping the closed row's body. It must duplicate an action the row
+   * already offers, because keyboard and screen-reader users reach that action, not the tap.
+   */
+  onTap?: () => void
+  /**
    * `card` is a free-standing rounded row; `flush` is a row inside a grouped list whose container
    * owns the radius, so neither the row nor its action drawer rounds its own corners.
    */
@@ -37,6 +43,7 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
   contentClassName,
   disabled = false,
   id,
+  onTap,
   variant = 'card',
 }) => {
   const flush = variant === 'flush'
@@ -306,9 +313,22 @@ export const SwipeableRow: React.FC<SwipeableRowProps> = ({
         onDragEnd={handleDragEnd}
         onPointerCancel={handleDragCancel}
         style={{ touchAction: 'pan-y', willChange: 'transform', x, backgroundColor: 'var(--card)' }}
-        onClick={() => {
+        onClick={event => {
           if (suppressNextClick.current) return
-          if (open) close()
+          if (open) {
+            close()
+            return
+          }
+          // A control inside the row (a selection checkbox, a link) handles its own click.
+          // The first tap after another row was swiped open only dismisses that row, as a tap
+          // outside an open drawer does on native lists.
+          if (hasOpenSwipeableRow()) {
+            closeOpenSwipeableRow()
+            return
+          }
+          const target = event.target as Element | null
+          if (target?.closest('button, a, input, label, select, textarea, [role="checkbox"]')) return
+          onTap?.()
         }}
       >
         {children}

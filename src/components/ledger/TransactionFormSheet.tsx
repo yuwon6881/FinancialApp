@@ -26,6 +26,8 @@ import type { SensitivePreferenceStatus } from '../../app/useAppPreferences'
 import { useSessionSafeDraftIds } from '../../lib/sessionSafeDrafts'
 import { Button } from '../ui/Button'
 import { ModalActions } from '../ui/ModalActions'
+import { cn } from '../../lib/utils'
+import { ADD_ANOTHER_ATTRIBUTE } from './transaction-form/useTransactionFormSubmit'
 import { CapturedAlertNotice } from './transaction-form/CapturedAlertNotice'
 import { BucketImpactLine } from './transaction-form/BucketImpactLine'
 import type { StabilityTopUpContext } from './transaction-form/useTransactionFormOptions'
@@ -181,6 +183,10 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
     if (form.state.mode === 'create') form.scanner.setShowScanPicker(true)
   }, [form.scanner.setShowScanPicker, form.state.mode, form.state.showAddForm])
 
+  // Only a typed new entry can chain into the next one; edits, drafts and detected purchases each
+  // belong to one row.
+  const offersAddAnother = form.state.mode === 'create' && !form.state.captureId
+
   const title = form.state.mode === 'edit'
     ? 'Edit Transaction'
     : form.state.mode === 'draft' ? 'Edit Draft' : form.state.captureId ? 'Review Detected Transaction' : 'Add Transaction'
@@ -292,7 +298,20 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
           <BucketImpactLine impact={form.bucketImpact} currency={props.currency} masked={Boolean(props.hideSensitive)} />
         )}
 
-        <ModalActions className="pt-2">
+        {/* Pinned to the sheet's visible bottom edge so Save stays reachable while attachments,
+            Stability options or bucket warnings grow the form past the viewport. */}
+        <ModalActions className={cn(
+          // Sticky offsets count from inside the sheet's padding, so the negative bottom and margin
+          // match that padding and the bar meets the sheet's edge with nothing scrolling beneath it.
+          // The compact sheet pads 1.25rem plus the home-indicator inset (index.css .sheet-panel);
+          // the bar takes that inset back as its own padding so its buttons stay clear of it.
+          'sticky z-10 border-t border-border/60 bg-popover -mx-4 px-4 pt-4',
+          'bottom-[calc(-1.25rem-env(safe-area-inset-bottom,0px))] mb-[calc(-1.25rem-env(safe-area-inset-bottom,0px))] pb-[calc(1rem+env(safe-area-inset-bottom,0px))]',
+          'sm:-bottom-6 sm:-mb-6 sm:-mx-6 sm:px-6 sm:py-5',
+          // Three stacked full-width buttons would pin a third of a phone screen; Cancel and
+          // "add another" share a row under the primary action instead.
+          offersAddAnother && 'max-sm:flex-row max-sm:flex-wrap-reverse',
+        )}>
           {form.state.errors.submit && (
             <p className="basis-full text-body text-destructive" role="alert">{form.state.errors.submit}</p>
           )}
@@ -300,11 +319,25 @@ export const TransactionFormSheet = forwardRef<TransactionFormSheetRef, Transact
             variant="secondary"
             type="button"
             onClick={form.handleCloseForm}
+            className={offersAddAnother ? 'max-sm:flex-1' : undefined}
           >
             Cancel
           </Button>
+          {offersAddAnother && (
+            <Button
+              variant="secondary"
+              type="submit"
+              {...{ [ADD_ANOTHER_ATTRIBUTE]: 'true' }}
+              disabled={saveDisabled}
+              title={accountsLoading ? 'Loading accounts…' : 'Save this entry and start the next one'}
+              className="max-sm:flex-1"
+            >
+              Save &amp; new
+            </Button>
+          )}
           <Button
             type="submit"
+            className={offersAddAnother ? 'max-sm:basis-full' : undefined}
             disabled={saveDisabled}
             title={isEdit && securityPending
               ? 'Finishing security check…'

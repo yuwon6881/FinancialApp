@@ -22,3 +22,6 @@ export const clearSwipeRowCloser = (close: () => void) => {
 export const closeOpenSwipeableRow = () => {
   closeActiveRow?.()
 }
+
+/** Whether some row currently shows its actions, so a tap elsewhere can dismiss it first. */
+export const hasOpenSwipeableRow = () => closeActiveRow !== null

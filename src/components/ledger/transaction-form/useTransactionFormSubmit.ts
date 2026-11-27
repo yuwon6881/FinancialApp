@@ -44,7 +44,12 @@ export interface UseTransactionFormSubmitOptions extends Pick<
   documentsFieldRef: RefObject<TransactionDocumentsFieldRef | null>
   clearFormDraft: () => void
   scanner: { clearScan: () => void }
+  /** Reopens a blank entry after a "Save & new" create, keeping the type and date. */
+  reopenForAnother?: (date: string, transactionType: TransactionFormState['transactionType']) => void
 }
+
+/** The submit control that asks to keep the sheet open for the next entry carries this attribute. */
+export const ADD_ANOTHER_ATTRIBUTE = 'data-add-another'
 
 export function useTransactionFormSubmit(options: UseTransactionFormSubmitOptions) {
   const capture = usePurchaseCaptureActions()
@@ -78,6 +83,7 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
     todayDate,
     clearFormDraft,
     scanner,
+    reopenForAnother,
   } = options
 
   // Saving is not always instant — attached documents upload before the transaction resolves — and
@@ -87,6 +93,9 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     if (isSubmitting) return
+    const submitter = (e.nativeEvent as SubmitEvent | undefined)?.submitter
+    const addAnother = state.mode === 'create' && !state.captureId && Boolean(reopenForAnother)
+      && submitter?.getAttribute(ADD_ANOTHER_ATTRIBUTE) === 'true'
     const isRestrictedDraft = state.mode === 'draft' && (!state.editingId || !isSessionSafeDraft(state.editingId))
     if ((state.mode === 'edit' && (hideSensitive || sensitivePreferenceStatus === 'pending'))
       || (isRestrictedDraft && hideSensitive)) {
@@ -195,6 +204,7 @@ export function useTransactionFormSubmit(options: UseTransactionFormSubmitOption
       dispatch({ type: 'RESET', todayDate, defaultCategory: '' })
       clearFormDraft()
       scanner.clearScan()
+      if (addAnother) reopenForAnother?.(state.date, state.transactionType)
     } catch (error) {
       dispatch({
         type: 'SET_ERRORS',

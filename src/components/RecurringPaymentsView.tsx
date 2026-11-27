@@ -341,6 +341,7 @@ export const RecurringPaymentsView: React.FC<RecurringPaymentsViewProps> = ({
               if (payment) setPayEarlyPayment(payment)
             }}
             onNavigateToLoan={onNavigateToLoan}
+            accounts={accounts}
           />
         </section>
       )}
